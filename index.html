@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fieldnote — Seasonal flowers, quietly arranged</title>
+<title>FLOWERBX — concept redesign</title>
+<meta name="description" content="An unofficial concept redesign for FLOWERBX. Single-variety flowers, cut and tied by hand.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -12,36 +13,32 @@
 <body>
 
 <!--
-  The hero is a tall scroll runway with a sticky stage inside it. Scroll
-  position through the runway becomes a 0..1 progress value that drives the
-  camera push. See src/main.js.
+  Two scroll-driven scenes, both running the same machinery (src/main.js).
+  Each is a tall runway with a sticky stage; scroll position through the
+  runway becomes a 0..1 progress value that drives everything in that scene.
 
-  Two source modes, switched by data-mode on the hero:
-    "stills" - two layered images faked into a push-in. Runs today, and is
-               also the permanent fallback for reduced-motion and for any
-               browser that refuses to scrub video.
-    "video"  - a single scrubbed clip. Drop the file in and flip the mode.
+  Scene 1 pushes IN, from the garden to the centre of one flower.
+  Scene 2 pulls BACK OUT, from that same centre to the hands that cut it.
+
+  They join invisibly because scene 2's clip was generated with scene 1's
+  end frame as its start frame -- same pixels, so the seam is a continuation
+  rather than a cut.
 -->
-<section class="hero" data-hero data-mode="stills">
-  <div class="hero__stage">
-    <div class="hero__panel" data-panel>
 
-      <div class="plate" data-plate>
-        <img class="plate__layer" data-layer="wide" alt=""
+<!-- ============================================================ scene 1 -->
+<section class="scene scene--hero" data-scene="hero" data-mode="stills">
+  <div class="scene__stage">
+    <div class="scene__panel" data-panel>
+
+      <div class="plate">
+        <img class="plate__layer" data-layer="from" alt=""
              src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png">
-        <img class="plate__layer" data-layer="macro" alt=""
+        <img class="plate__layer" data-layer="to" alt=""
              src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_3105b6d4-d68a-4705-89f5-2b58186d4342.png">
 
-        <!-- Muted + playsinline are load-bearing on iOS, not decoration.
-             Mode flips to video on canplaythrough only -- currentTime is
-             unreliable until the clip is fully buffered.
-
-             This points at the CDN so the move can be reviewed in context
-             immediately. Before this goes anywhere real, vendor the file to
-             public/media/push-in.mp4 and run the all-intra re-encode in the
-             README: buffering alone fixes seek stalls, but a default keyframe
-             interval still makes the decoder chew through dozens of frames
-             per scrub. -->
+        <!-- muted + playsinline are load-bearing on iOS, not decoration.
+             Mode flips to video on canplaythrough only, since currentTime is
+             unreliable until the clip is fully buffered. -->
         <video class="plate__layer plate__layer--video" data-layer="video"
                src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_173022_c28da1c8-06c3-4a57-892a-e511b65b50d7.mp4"
                muted playsinline preload="auto" aria-hidden="true"></video>
@@ -50,17 +47,17 @@
       </div>
 
       <header class="masthead" data-fade>
-        <a class="masthead__mark" href="#">Fieldnote</a>
+        <a class="masthead__mark" href="#">FLOWERBX</a>
         <nav class="masthead__nav">
           <a href="#shop">Shop</a>
+          <a href="#studio">Studio</a>
           <a href="#">Subscriptions</a>
-          <a href="#">Studio</a>
         </nav>
       </header>
 
       <div class="statement" data-fade>
         <h1 class="statement__line">Everything<br><em>in season</em></h1>
-        <p class="statement__sub">Cut this morning, arranged by hand, delivered before noon.</p>
+        <p class="statement__sub">One flower, never mixed. Cut this morning, delivered before noon.</p>
       </div>
 
       <div class="cue" data-fade aria-hidden="true">
@@ -72,7 +69,38 @@
   </div>
 </section>
 
-<!-- The handoff. Rises out of the macro frame as the push-in lands. -->
+<!-- ============================================================ scene 2 -->
+<!-- The reverse. Type behaves inversely to scene 1: it arrives as the shot
+     resolves, rather than retiring as it begins. -->
+<section class="scene scene--studio" id="studio" data-scene="studio" data-mode="stills">
+  <div class="scene__stage">
+    <div class="scene__panel" data-panel>
+
+      <div class="plate">
+        <img class="plate__layer" data-layer="from" alt=""
+             src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_3105b6d4-d68a-4705-89f5-2b58186d4342.png">
+        <img class="plate__layer" data-layer="to" alt=""
+             src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_181420_7d452e52-0693-46c8-a404-f9bab046a2d5.png">
+
+        <video class="plate__layer plate__layer--video" data-layer="video"
+               src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_184958_304a9ce1-0d9a-4ec5-9ed0-1bef1e7829f4.mp4"
+               muted playsinline preload="auto" aria-hidden="true"></video>
+
+        <div class="plate__scrim plate__scrim--top" aria-hidden="true"></div>
+      </div>
+
+      <!-- Sits in the open upper-left the shot was composed to leave empty. -->
+      <div class="aside" data-arrive>
+        <p class="eyebrow eyebrow--light">The studio</p>
+        <h2 class="aside__line">Tied by hand,<br><em>one at a time</em></h2>
+        <p class="aside__sub">No mixed bouquets. A single variety, wrapped in paper and twine, exactly as it left the field.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== shop -->
 <section class="shop" id="shop" data-shop>
   <div class="shop__intro">
     <p class="eyebrow">This week</p>
@@ -86,7 +114,7 @@
     </li>
     <li class="card">
       <div class="card__frame"></div>
-      <div class="card__meta"><h3>Field Bundle</h3><p>Mixed stems, wrapped</p><span>£36</span></div>
+      <div class="card__meta"><h3>Field Bundle</h3><p>Single variety, wrapped</p><span>£36</span></div>
     </li>
     <li class="card">
       <div class="card__frame"></div>
@@ -100,7 +128,11 @@
 </section>
 
 <footer class="footer">
-  <p>Fieldnote — placeholder name, demo build</p>
+  <p>
+    <strong>Unofficial concept redesign.</strong> Not affiliated with, endorsed by, or
+    connected to FLOWERBX Ltd. A design study built for demonstration — the products,
+    prices and imagery below are fictional and are not offered for sale.
+  </p>
 </footer>
 
 <script type="module" src="./src/main.js"></script>

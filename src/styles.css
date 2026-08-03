@@ -1,5 +1,5 @@
-/* Fieldnote — see STYLE.md. Every value here traces back to that document;
-   if you change a token, change it there too. */
+/* FLOWERBX concept — see STYLE.md. Every value here traces back to that
+   document; if you change a token, change it there too. */
 
 :root {
   --paper:        #F5F2EC;
@@ -22,8 +22,6 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: auto; }
-
 body {
   margin: 0;
   background: var(--paper);
@@ -45,16 +43,17 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink-soft);
 }
 
-/* ---------------------------------------------------------------- hero --- */
+.eyebrow--light { color: rgba(251,250,247,0.7); }
 
-/* The runway. Its height is the scroll budget for the whole push-in --
-   longer feels slower and more deliberate, shorter feels urgent. */
-.hero {
-  height: 340vh;
-  position: relative;
-}
+/* --------------------------------------------------------------- scenes --- */
 
-.hero__stage {
+/* Runway height is the scroll budget for the move. Longer feels slower and
+   more deliberate; shorter feels urgent. */
+.scene { position: relative; }
+.scene--hero   { height: 340vh; }
+.scene--studio { height: 300vh; }
+
+.scene__stage {
   position: sticky;
   top: 0;
   height: 100vh;
@@ -62,22 +61,24 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
-/* Inset at rest, full-bleed by the end of the push. The inset is what makes
-   this read as print rather than as a stock-video header. */
-.hero__panel {
+/* Hero opens inset and ends full-bleed. The inset is what reads as print
+   rather than as a stock-video header. */
+.scene__panel {
   position: absolute;
   inset: var(--panel-inset, var(--gutter));
   overflow: hidden;
   border-radius: var(--panel-radius, 2px);
   background: var(--ink);
-  transition: none;
 }
 
-.plate {
-  position: absolute;
+/* The studio scene inherits the hero's full-bleed end state -- we are inside
+   the story by now, and re-boxing it would undo the arrival. */
+.scene--studio .scene__panel {
   inset: 0;
-  overflow: hidden;
+  border-radius: 0;
 }
+
+.plate { position: absolute; inset: 0; overflow: hidden; }
 
 .plate__layer {
   position: absolute;
@@ -90,12 +91,12 @@ a { color: inherit; text-decoration: none; }
 }
 
 .plate__layer--video { display: none; }
-.hero[data-mode="video"] .plate__layer--video { display: block; }
-.hero[data-mode="video"] [data-layer="wide"],
-.hero[data-mode="video"] [data-layer="macro"] { display: none; }
+.scene[data-mode="video"] .plate__layer--video { display: block; }
+.scene[data-mode="video"] [data-layer="from"],
+.scene[data-mode="video"] [data-layer="to"] { display: none; }
 
-/* Keeps the type legible without dimming the whole image. Weighted to the
-   lower-left, where the statement sits. */
+/* Protects type without dimming the whole image. Weighted toward wherever
+   that scene's type actually sits. */
 .plate__scrim {
   position: absolute;
   inset: 0;
@@ -105,6 +106,13 @@ a { color: inherit; text-decoration: none; }
   opacity: var(--scrim-opacity, 1);
   pointer-events: none;
 }
+
+.plate__scrim--top {
+  background:
+    linear-gradient(to bottom right, rgba(42,39,36,0.55) 0%, rgba(42,39,36,0) 55%);
+}
+
+/* ----------------------------------------------------------- scene type --- */
 
 .masthead {
   position: absolute;
@@ -117,9 +125,10 @@ a { color: inherit; text-decoration: none; }
 }
 
 .masthead__mark {
-  font-family: var(--serif);
-  font-size: clamp(1.25rem, 2vw, 1.6rem);
-  letter-spacing: -0.01em;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+  letter-spacing: 0.14em;
   color: var(--paper-raised);
 }
 
@@ -127,8 +136,8 @@ a { color: inherit; text-decoration: none; }
 .masthead__nav a { color: rgba(251,250,247,0.78); transition: color 200ms var(--ease); }
 .masthead__nav a:hover { color: var(--paper-raised); }
 
-/* Hangs at the lower-left of the panel. Asymmetry over centering --
-   the flower is the only thing allowed to be centred. */
+/* Hangs lower-left. Asymmetry over centring -- the flower is the only thing
+   allowed to be centred. */
 .statement {
   position: absolute;
   left: clamp(1.25rem, 3.5vw, 2.75rem);
@@ -137,24 +146,38 @@ a { color: inherit; text-decoration: none; }
   opacity: var(--type-opacity, 1);
 }
 
-.statement__line {
+/* Sits in the open upper-left the studio shot was composed to leave empty. */
+.aside {
+  position: absolute;
+  top: clamp(4rem, 12vh, 8rem);
+  left: clamp(1.25rem, 3.5vw, 2.75rem);
+  max-width: min(40ch, 46%);
+  opacity: var(--type-opacity, 0);
+}
+
+.statement__line,
+.aside__line {
   margin: 0;
   font-family: var(--serif);
   font-weight: 400;
   /* Deliberately slightly too large, tight leading, negative tracking.
      STYLE.md §2. */
-  font-size: clamp(3rem, 9vw, 8rem);
   line-height: 0.95;
   letter-spacing: -0.02em;
   color: var(--paper-raised);
 }
 
-.statement__line em {
+.statement__line { font-size: clamp(3rem, 9vw, 8rem); }
+.aside__line     { font-size: clamp(2.25rem, 5.5vw, 4.75rem); margin-top: 0.75rem; }
+
+.statement__line em,
+.aside__line em {
   font-style: italic;
   color: var(--blush);
 }
 
-.statement__sub {
+.statement__sub,
+.aside__sub {
   margin: clamp(1rem, 2vw, 1.5rem) 0 0;
   max-width: 34ch;
   font-size: clamp(0.875rem, 1.1vw, 1rem);
@@ -188,7 +211,7 @@ a { color: inherit; text-decoration: none; }
   50%      { transform: scaleX(1);    opacity: 0.9; }
 }
 
-/* ---------------------------------------------------------------- shop --- */
+/* ----------------------------------------------------------------- shop --- */
 
 .shop {
   position: relative;
@@ -220,8 +243,7 @@ a { color: inherit; text-decoration: none; }
   list-style: none;
 }
 
-/* Reveal is staggered by index via --i, set in the markup order. Entrance
-   motion, so it eases -- unlike anything scroll-driven. */
+/* Entrance motion, so it eases -- unlike anything scroll-driven. */
 .card {
   opacity: 0;
   transform: translateY(18px);
@@ -262,18 +284,30 @@ a { color: inherit; text-decoration: none; }
   padding: 0 var(--gutter) clamp(3rem, 6vh, 5rem);
   color: var(--ink-soft);
   font-size: 0.75rem;
+  line-height: 1.6;
 }
 
-.footer p { max-width: 1240px; margin: 0 auto; padding-top: 2rem; border-top: 1px solid rgba(138,144,128,0.28); }
+.footer p {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(138,144,128,0.28);
+}
 
-/* --------------------------------------------------------- reduced motion */
+.footer strong { color: var(--ink); font-weight: 500; }
 
-/* The stills were composed to stand alone, so the hero still reads with the
-   camera move removed entirely. STYLE.md §4. */
+/* ----------------------------------------------------- reduced motion --- */
+
+/* The stills were composed to stand alone, so both scenes still read with
+   the camera moves removed entirely. STYLE.md §4. */
 @media (prefers-reduced-motion: reduce) {
-  .hero { height: 100vh; }
-  .hero__stage { position: relative; }
+  .scene--hero, .scene--studio { height: 100vh; }
+  .scene__stage { position: relative; }
   .cue__rule { animation: none; transform: scaleX(1); }
   .card { opacity: 1; transform: none; transition: none; }
-  [data-layer="macro"] { opacity: 0 !important; }
+  .scene [data-layer="to"] { opacity: 0 !important; }
+  /* The studio scene's type has no arrival to ride in on, so it just sits. */
+  .aside { opacity: 1; }
+  .scene--studio [data-layer="to"] { opacity: 1 !important; }
+  .scene--studio [data-layer="from"] { opacity: 0 !important; }
 }

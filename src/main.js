@@ -1,131 +1,191 @@
 /**
- * Fieldnote hero — scroll-driven camera push.
+ * FLOWERBX concept — scroll-driven camera moves.
  *
- * Scroll position through the hero runway becomes a 0..1 progress value.
- * That single number drives everything: the push, the panel opening out to
- * full-bleed, and the type retiring. Nothing here eases -- scroll-driven
- * motion tracks the finger linearly and is smoothed by a lerp instead
- * (STYLE.md §4.2). The lerp is what separates "expensive" from "janky";
- * writing scroll values straight to the DOM reads as stuttering on any
- * device that doesn't fire scroll events at 60Hz.
+ * Each scene is a tall runway with a sticky stage. Scroll position through
+ * that runway becomes a single 0..1 progress value, and every keyframe in the
+ * scene is a range on that one value (see `span`), so they cannot drift out
+ * of sync with each other.
+ *
+ * Nothing here eases. Scroll-driven motion tracks the finger linearly and is
+ * smoothed by a lerp instead (STYLE.md §4.2) -- easing a scroll-bound value
+ * makes it feel like it is arguing with the input. Entrance motion, which
+ * fires on its own, does ease; that lives in CSS.
  */
-
-const hero = document.querySelector('[data-hero]');
-const panel = document.querySelector('[data-panel]');
-const wide = document.querySelector('[data-layer="wide"]');
-const macro = document.querySelector('[data-layer="macro"]');
-const video = document.querySelector('[data-layer="video"]');
-const shop = document.querySelector('[data-shop]');
-
-const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-/** Seconds at the head of the clip that are near-static wind, before the
- *  camera starts moving. At rest we loop just this segment, which buys the
- *  ambient "everything is alive" state without a second video file. */
-const AMBIENT_END = 1.5;
-
-/** Below this progress the hero is considered at rest. */
-const REST = 0.015;
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** Remap v from [inLo, inHi] to 0..1, clamped. Every keyframe below is a
- *  range on the same master progress value rather than its own timeline,
- *  which keeps them impossible to desynchronise. */
-function span(v, inLo, inHi) {
-  if (inHi === inLo) return 0;
-  return clamp((v - inLo) / (inHi - inLo), 0, 1);
+/** Remap v from [lo, hi] to 0..1, clamped. */
+function span(v, lo, hi) {
+  if (hi === lo) return 0;
+  return clamp((v - lo) / (hi - lo), 0, 1);
 }
 
-let target = 0;   // where the scroll says we are
-let current = 0;  // where we're actually drawing, chasing target
+/**
+ * Per-scene choreography. Each receives the scene's progress and its parts.
+ *
+ * The two scenes are deliberate mirrors. Scene 1 pushes in: the world
+ * enlarges, type retires, the panel opens out to full-bleed. Scene 2 pulls
+ * back: the world recedes, type arrives, and the frame stays open. Both keep
+ * their two plates moving in the *same* direction as each other so the
+ * handover reads as one continuous camera move rather than a crossfade.
+ */
+const CHOREOGRAPHY = {
+  hero(p, { panel, from, to }) {
+    // Panel opens from inset to full-bleed as the camera commits. The inset
+    // is the "print" signal at rest; losing it is what makes the arrival feel
+    // like going inside the frame rather than watching it in a box.
+    const opening = span(p, 0, 0.9);
+    const gutter = getComputedStyle(document.documentElement)
+      .getPropertyValue('--gutter').trim();
+    panel.style.setProperty('--panel-inset', `calc(${gutter} * ${1 - opening})`);
+    panel.style.setProperty('--panel-radius', `${lerp(2, 0, opening)}px`);
+
+    // Type has said its piece before the camera moves with any conviction.
+    panel.style.setProperty('--type-opacity', String(1 - span(p, 0, 0.28)));
+    // The scrim exists only to protect type. Once type is gone, so is it.
+    panel.style.setProperty('--scrim-opacity', String(1 - span(p, 0.34, 0.6)));
+
+    // Both plates push forward; the near one past the lens, the far one
+    // settling in from larger.
+    from.style.transform = `scale(${lerp(1, 2.6, p)})`;
+    from.style.opacity = String(1 - span(p, 0.4, 0.72));
+    to.style.transform = `scale(${lerp(1.7, 1, p)})`;
+    to.style.opacity = String(span(p, 0.4, 0.72));
+  },
+
+  studio(p, { panel, from, to }) {
+    // Type arrives late, once the shot has resolved enough to have somewhere
+    // to put it -- the inverse of the hero, where it leaves early.
+    panel.style.setProperty('--type-opacity', String(span(p, 0.52, 0.82)));
+    panel.style.setProperty('--scrim-opacity', String(span(p, 0.42, 0.75)));
+
+    // A pull-back cannot be built by shrinking plates. These are object-fit:
+    // cover, so anything below scale(1) stops covering the panel and punches
+    // a hole to the background. Both plates therefore stay >= 1, and the
+    // recede is expressed by the incoming wide plate UN-zooming from 2x down
+    // to its natural size -- which is what pulling back actually looks like.
+    //
+    // The macro plate holds at exactly 1 rather than drifting, because scene
+    // 1 ends on that same frame at that same scale. Any other value here pops
+    // at the seam.
+    from.style.transform = 'scale(1)';
+    from.style.opacity = String(1 - span(p, 0.12, 0.42));
+    to.style.transform = `scale(${lerp(2, 1, p)})`;
+    to.style.opacity = String(span(p, 0.12, 0.42));
+  },
+};
+
+/** Seconds at the head of the hero clip that are near-static wind, before
+ *  the camera starts moving. At rest we loop only this segment, which buys
+ *  the ambient "everything is alive" state without a second video file.
+ *  If the generated clip starts moving at a different time, this is the only
+ *  place that timing is encoded. */
+const AMBIENT_END = 1.5;
+
+/** Below this progress a scene counts as at rest. */
+const REST = 0.015;
+
+class Scene {
+  constructor(root) {
+    this.root = root;
+    this.name = root.dataset.scene;
+    this.panel = root.querySelector('[data-panel]');
+    this.from = root.querySelector('[data-layer="from"]');
+    this.to = root.querySelector('[data-layer="to"]');
+    this.video = root.querySelector('[data-layer="video"]');
+    this.choreograph = CHOREOGRAPHY[this.name];
+
+    this.target = 0;
+    this.current = 0;
+
+    // Only the hero idles on ambient wind; the studio scene has no at-rest
+    // state worth looping, since you arrive at it already scrolling.
+    this.ambient = this.name === 'hero';
+
+    this.wireVideo();
+  }
+
+  wireVideo() {
+    if (!this.video || !this.video.getAttribute('src')) return;
+    // A scrubbable clip must be fully buffered before currentTime is
+    // reliable, especially on iOS Safari. Until then, stay on stills rather
+    // than show a hero that stutters.
+    this.video.addEventListener('canplaythrough', () => {
+      this.root.dataset.mode = 'video';
+    }, { once: true });
+  }
+
+  readProgress() {
+    const rect = this.root.getBoundingClientRect();
+    const runway = this.root.offsetHeight - window.innerHeight;
+    if (runway <= 0) return 0;
+    return clamp(-rect.top / runway, 0, 1);
+  }
+
+  /** True while still interpolating toward the scroll position. */
+  step() {
+    this.target = this.readProgress();
+    const delta = this.target - this.current;
+    // Snap once further interpolation would be invisible, so the rAF loop
+    // can actually go idle instead of chasing forever.
+    if (Math.abs(delta) < 0.0002) {
+      if (this.current === this.target) return false;
+      this.current = this.target;
+      this.draw();
+      return false;
+    }
+    this.current = lerp(this.current, this.target, 0.12);
+    this.draw();
+    return true;
+  }
+
+  draw() {
+    const p = this.current;
+    this.choreograph(p, { panel: this.panel, from: this.from, to: this.to });
+    if (this.root.dataset.mode === 'video') this.scrub(p);
+  }
+
+  scrub(p) {
+    const v = this.video;
+    if (!v || !v.duration || Number.isNaN(v.duration)) return;
+
+    if (this.ambient && p <= REST) {
+      // At rest: let the wind play, looping only the static head of the clip.
+      if (v.paused) v.play().catch(() => {});
+      if (v.currentTime >= AMBIENT_END) v.currentTime = 0;
+      return;
+    }
+
+    if (!v.paused) v.pause();
+    v.currentTime = p * v.duration;
+  }
+}
+
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+const scenes = [...document.querySelectorAll('[data-scene]')].map((el) => new Scene(el));
+
 let ticking = false;
 
-function readProgress() {
-  const rect = hero.getBoundingClientRect();
-  const runway = hero.offsetHeight - window.innerHeight;
-  if (runway <= 0) return 0;
-  return clamp(-rect.top / runway, 0, 1);
-}
-
-function draw(p) {
-  // Panel opens from inset to full-bleed as the camera commits. The inset is
-  // the "print" signal at rest; losing it is what makes the arrival feel like
-  // you've gone inside the frame rather than watched it in a box.
-  const opening = span(p, 0, 0.9);
-  const gutter = getComputedStyle(document.documentElement)
-    .getPropertyValue('--gutter').trim();
-  panel.style.setProperty('--panel-inset', `calc(${gutter} * ${1 - opening})`);
-  panel.style.setProperty('--panel-radius', `${lerp(2, 0, opening)}px`);
-
-  // Type retires early and fast -- it has said its piece by the time the
-  // camera is moving with any conviction. One layer moves at a time
-  // (STYLE.md §4.1): the world moves, the type only fades.
-  panel.style.setProperty('--type-opacity', String(1 - span(p, 0, 0.28)));
-
-  // Scrim is only there to protect type. Once the type is gone, so is it.
-  panel.style.setProperty('--scrim-opacity', String(1 - span(p, 0.34, 0.6)));
-
-  if (hero.dataset.mode === 'video') {
-    drawVideo(p);
-  } else {
-    drawStills(p);
-  }
-}
-
-/** Stills mode: two layers faking a continuous dolly. The wide plate pushes
- *  past the camera while the macro plate settles in from larger -- both are
- *  always moving *forward*, so the handover reads as one continuous move
- *  rather than a crossfade between two photographs. */
-function drawStills(p) {
-  const push = span(p, 0, 1);
-  wide.style.transform = `scale(${lerp(1, 2.6, push)})`;
-  wide.style.opacity = String(1 - span(p, 0.4, 0.72));
-
-  macro.style.transform = `scale(${lerp(1.7, 1, push)})`;
-  macro.style.opacity = String(span(p, 0.4, 0.72));
-}
-
-/** Video mode: scrub currentTime directly. */
-function drawVideo(p) {
-  if (!video.duration || Number.isNaN(video.duration)) return;
-
-  if (p <= REST) {
-    // At rest: let the wind play. Loop only the static head of the clip.
-    if (video.paused) video.play().catch(() => {});
-    if (video.currentTime >= AMBIENT_END) video.currentTime = 0;
-    return;
-  }
-
-  if (!video.paused) video.pause();
-  video.currentTime = p * video.duration;
-}
-
 function frame() {
-  // Snap when we're close enough that further interpolation is invisible,
-  // so the rAF loop can actually go idle instead of chasing forever.
-  const delta = target - current;
-  if (Math.abs(delta) < 0.0002) {
-    current = target;
-    draw(current);
+  // Step every scene each frame; keep looping while any is still settling.
+  const busy = scenes.map((s) => s.step()).some(Boolean);
+  if (busy) {
+    requestAnimationFrame(frame);
+  } else {
     ticking = false;
-    return;
   }
-  current = lerp(current, target, 0.12);
-  draw(current);
-  requestAnimationFrame(frame);
 }
 
 function onScroll() {
-  target = readProgress();
   if (!ticking) {
     ticking = true;
     requestAnimationFrame(frame);
   }
 }
 
-function init() {
+function revealShop() {
+  const shop = document.querySelector('[data-shop]');
   shop.querySelectorAll('.card').forEach((card, i) => {
     card.style.setProperty('--i', String(i));
   });
@@ -139,28 +199,25 @@ function init() {
     });
   }, { threshold: 0.15 });
   observer.observe(shop);
+}
+
+function init() {
+  revealShop();
 
   if (reduced.matches) {
-    // Hero holds on frame 0; the composition was built to stand alone.
-    draw(0);
+    // Both scenes hold on their opening frame. The stills were composed to
+    // stand alone, so the page still reads with the camera moves removed.
+    scenes.forEach((s) => s.draw());
     return;
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
 
-  // A scrubbable clip must be fully buffered before currentTime is reliable,
-  // especially on iOS Safari. Until it is, stay in stills mode rather than
-  // showing a hero that stutters.
-  if (video && video.getAttribute('src')) {
-    video.addEventListener('canplaythrough', () => {
-      hero.dataset.mode = 'video';
-      onScroll();
-    }, { once: true });
-  }
-
-  target = current = readProgress();
-  draw(current);
+  scenes.forEach((s) => {
+    s.target = s.current = s.readProgress();
+    s.draw();
+  });
   onScroll();
 }
 

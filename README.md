@@ -1,8 +1,12 @@
-# Fieldnote — flower shop hero demo
+# FLOWERBX — concept redesign
 
-A scroll-driven hero: a camera push from a wide garden into the centre of a
-single ranunculus, resolving into a product grid. Design decisions and the
-image-prompt vocabulary live in [STYLE.md](./STYLE.md).
+An unofficial concept redesign. Scroll drives one continuous camera move: a
+push from a wide garden into the centre of a single ranunculus, then a pull
+back out to the hands that cut it, resolving into a product grid.
+
+Not affiliated with FLOWERBX Ltd. Products, prices and imagery are fictional.
+
+Design decisions and the image-prompt vocabulary live in [STYLE.md](./STYLE.md).
 
 ## Run it
 
@@ -13,97 +17,73 @@ python3 -m http.server 8899
 # open http://127.0.0.1:8899
 ```
 
-Opening `index.html` straight off the filesystem works too.
+Live at https://kemalrahmandesign.github.io/flowerdemo/ — pushes to
+`claude/flower-shop-hero-section-a2026s` redeploy automatically.
 
-## How the hero works
+## Architecture
 
-The hero is a tall scroll runway (`height: 340vh`) with a sticky stage inside
-it. Scroll position through that runway becomes a single `0..1` progress value,
-and everything derives from it — the push, the panel opening from inset to
-full-bleed, the type retiring, the scrim lifting. Because every keyframe is a
-range on the same master value (`span()` in `src/main.js`), they cannot drift
-out of sync with each other.
+**One film, one scrub, one runway.** The two generated clips are concatenated
+into a single 10s file, so nothing switches source at runtime and there is no
+seam to hide. Scroll position through a 600vh runway becomes a single `0..1`
+value that seeks the film and drives every caption. Captions are ranges on
+that one timeline (`TIMELINE` in `src/main.js`), so they cannot drift apart.
 
-Scroll-driven motion is **linear and lerp-smoothed, never eased**. Easing a
-scroll-bound value makes it feel like it is disagreeing with your finger. The
-lerp (`0.12` per frame) is what separates this from the stuttering version;
-writing raw scroll values to the DOM reads as jank on anything that doesn't
-fire scroll events at 60Hz.
+Scroll-driven motion is linear and lerp-smoothed, never eased — easing a
+scroll-bound value makes it feel like it is arguing with your finger.
 
-### Two source modes
+The stills are a fallback only: `prefers-reduced-motion`, or a video that
+never becomes scrubbable. The page holds on them until `canplaythrough`,
+because `currentTime` is unreliable until the file is fully buffered.
 
-Switched by `data-mode` on the `.hero` element.
+## Why the first build was laggy
 
-- **`stills`** (current) — two layered images faked into a continuous dolly.
-  The wide plate pushes past the camera while the macro plate settles in from
-  larger; both are always moving *forward*, which is why the handover reads as
-  one move rather than a crossfade between two photographs.
-- **`video`** — a single clip scrubbed via `currentTime`.
+Worth recording, because every one of these is a trap you hit again.
 
-`stills` is **not** a placeholder that gets deleted. It stays as the fallback
-for `prefers-reduced-motion` and for browsers that won't scrub reliably, so the
-video is an enhancement rather than a dependency.
+1. **The clips were never encoded for scrubbing.** Two 1080p24 files, ~31MB
+   each, with a normal keyframe interval. Every `currentTime` write sent the
+   decoder back to the previous keyframe and re-decoded forward — over 62MB of
+   video streamed from a CDN. The merged, all-intra, 20fps, 1280-wide film is
+   **7MB with all 202 frames as keyframes**, so a seek decodes exactly one.
+2. **A forced style recalculation every frame.** The draw loop called
+   `getComputedStyle()` to resolve `--gutter`, 60× a second, for a value that
+   never changes. Now JS writes only unitless numbers into custom properties
+   and CSS does the arithmetic in `calc()`. Verified at zero calls during a
+   scroll burst.
+3. **Two video elements both `preload="auto"`**, both decoding, both with
+   `will-change` pinning large textures in GPU memory. Now one film, and
+   `will-change` only on the fallback stills.
+4. **Sub-frame seeks.** At 20fps, `currentTime` writes closer together than
+   half a frame are invisible but still cost a decode. They are now skipped.
 
-## Adding the video
+There is also a rule the layout depends on: the plates are `object-fit:
+cover`, so **any scale below 1 stops covering the panel** and punches a hole
+through to the background. A pull-back has to be built by un-zooming the
+incoming layer from above 1, never by shrinking anything.
 
-1. Drop the clip at `public/media/push-in.mp4`.
-2. Point the `<video data-layer="video">` element at it:
-   ```html
-   <video class="plate__layer plate__layer--video" data-layer="video"
-          src="./public/media/push-in.mp4"
-          muted playsinline preload="auto" aria-hidden="true"></video>
-   ```
+## Rebuilding the film
 
-`muted` and `playsinline` are load-bearing on iOS, not decoration — without
-both, the ambient loop won't autoplay.
+`./scripts/vendor.sh` downloads the source clips and stills, merges the clips,
+re-encodes all-intra, verifies the keyframe count, and repoints `index.html`
+at the local files. Needs `ffmpeg` (`brew install ffmpeg`).
 
-Mode flips to `video` automatically, but **only on `canplaythrough`**. That
-gate is deliberate: `currentTime` is unreliable until the clip is fully
-buffered, so until then the hero stays in stills mode rather than stuttering.
+Run it before this goes anywhere real — the CDN URLs are generation
+artifacts, not hosting, and they can rotate.
 
-### Re-encode for scrubbing — do not skip this
-
-A normal H.264 export scrubs badly. Seeking to an arbitrary `currentTime`
-forces the decoder back to the nearest keyframe, and with a default keyframe
-interval (~every 250 frames) that means decoding dozens of frames per seek.
-The fix is an all-intra encode — every frame its own keyframe:
-
-```sh
-ffmpeg -i push-in-source.mp4 \
-  -c:v libx264 -preset slow -crf 18 \
-  -g 1 -keyint_min 1 -sc_threshold 0 \
-  -pix_fmt yuv420p -movflags +faststart \
-  -an \
-  public/media/push-in.mp4
-```
-
-The tradeoff is real: this inflates a 5s 1080p clip to roughly 15–25MB. That is
-the price of smooth scrubbing, and it is why the clip is short. If the size is
-unacceptable, the alternative is an image sequence (~100 WebP frames painted to
-a canvas) — heavier to set up, but the most bulletproof option there is.
-
-### Ambient loop
-
-There is no second video file. The clip opens with ~1.5s of near-static wind
-before the camera moves, and at rest the hero loops just that head segment
-(`AMBIENT_END` in `src/main.js`). Scrolling hands control over to the scrub.
-
-If the generated clip starts moving earlier or later than 1.5s, change that one
-constant to match — it is the only place the timing is encoded.
+If 7MB is still too heavy, the escalation is an image sequence: ~200 WebP
+frames painted to a canvas. Heavier to set up, but the most bulletproof
+scrubbing there is.
 
 ## Tunables
 
 | What | Where | Note |
 | --- | --- | --- |
-| Push length / pace | `.hero { height }` in `styles.css` | Longer runway = slower, more deliberate. |
-| Type fade-out | `span(p, 0, 0.28)` in `main.js` | Type is gone by 28% of the runway. |
-| Stills handover | `span(p, 0.4, 0.72)` in `main.js` | Where wide gives way to macro. |
-| Scrub smoothing | `lerp(current, target, 0.12)` | Lower = heavier, more filmic. Higher = snappier. |
+| Pace of the whole move | `.film { height: 600vh }` | Longer runway = slower, more deliberate. |
+| Caption timing | `TIMELINE` in `main.js` | Ranges on the film's 0..1 timeline. |
+| Scrub smoothing | `lerp(current, target, 0.18)` | Higher = attached to the finger. Below ~0.12 the tail reads as lag. |
+| Ambient loop length | `AMBIENT_END` | Seconds of static wind at the head, looped at rest. |
 
 ## Known gaps
 
-- Product cards are empty frames. Product photography is a separate shoot from
-  the hero; filling them with more garden renders would muddy the demo.
-- `Fieldnote` is a placeholder name.
-- Hero imagery currently loads from the Higgsfield CDN. Vendor the files into
-  `public/media/` before this goes anywhere real.
+- Product cards are empty frames. Product photography is a separate shoot.
+- Mobile is unaddressed by choice — the 16:9 film crops to a centre strip in
+  a portrait panel.

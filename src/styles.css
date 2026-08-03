@@ -43,17 +43,18 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink-soft);
 }
 
-.eyebrow--light { color: rgba(251,250,247,0.7); }
+.eyebrow--light { color: rgba(251,250,247,0.72); }
 
-/* --------------------------------------------------------------- scenes --- */
+/* ----------------------------------------------------------------- film --- */
 
-/* Runway height is the scroll budget for the move. Longer feels slower and
-   more deliberate; shorter feels urgent. */
-.scene { position: relative; }
-.scene--hero   { height: 340vh; }
-.scene--studio { height: 300vh; }
+/* Runway height is the scroll budget for the whole 10s film. Longer feels
+   slower and more deliberate; shorter feels urgent. */
+.film {
+  position: relative;
+  height: 600vh;
+}
 
-.scene__stage {
+.film__stage {
   position: sticky;
   top: 0;
   height: 100vh;
@@ -61,58 +62,62 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
-/* Hero opens inset and ends full-bleed. The inset is what reads as print
-   rather than as a stock-video header. */
-.scene__panel {
+/* --open is written by JS as a plain number, 1 (inset) to 0 (full bleed).
+   All unit arithmetic happens here so the animation loop never has to read
+   computed style -- see the performance note in main.js. */
+.film__panel {
   position: absolute;
-  inset: var(--panel-inset, var(--gutter));
+  inset: calc(var(--gutter) * var(--open, 1));
   overflow: hidden;
-  border-radius: var(--panel-radius, 2px);
+  border-radius: calc(2px * var(--open, 1));
   background: var(--ink);
 }
 
-/* The studio scene inherits the hero's full-bleed end state -- we are inside
-   the story by now, and re-boxing it would undo the arrival. */
-.scene--studio .scene__panel {
-  inset: 0;
-  border-radius: 0;
-}
+.plate { position: absolute; inset: 0; }
 
-.plate { position: absolute; inset: 0; overflow: hidden; }
-
-.plate__layer {
+.plate__still,
+.plate__film {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform-origin: 50% 50%;
-  will-change: transform, opacity;
 }
 
-.plate__layer--video { display: none; }
-.scene[data-mode="video"] .plate__layer--video { display: block; }
-.scene[data-mode="video"] [data-layer="from"],
-.scene[data-mode="video"] [data-layer="to"] { display: none; }
+/* Only the stills are ever transformed, and only while they are the visible
+   fallback. The film itself is never scaled -- the camera move is baked into
+   the footage, which is the entire point of scrubbing it. */
+.plate__still { will-change: transform, opacity; }
 
-/* Protects type without dimming the whole image. Weighted toward wherever
-   that scene's type actually sits. */
-.plate__scrim {
+.plate__film { opacity: 0; }
+
+/* Swap to the film only once it is genuinely scrubbable. */
+.film[data-ready="true"] .plate__film { opacity: 1; }
+.film[data-ready="true"] .plate__still { display: none; }
+
+.scrim {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(to top, rgba(42,39,36,0.42) 0%, rgba(42,39,36,0) 46%),
-    linear-gradient(to bottom, rgba(42,39,36,0.28) 0%, rgba(42,39,36,0) 30%);
-  opacity: var(--scrim-opacity, 1);
   pointer-events: none;
 }
 
-.plate__scrim--top {
-  background:
-    linear-gradient(to bottom right, rgba(42,39,36,0.55) 0%, rgba(42,39,36,0) 55%);
+/* Each scrim protects one caption and fades with it, rather than sitting
+   there dimming the footage for its own sake. */
+.scrim--bottom {
+  background: linear-gradient(to top, rgba(42,39,36,0.46) 0%, rgba(42,39,36,0) 48%);
 }
 
-/* ----------------------------------------------------------- scene type --- */
+.scrim--corner {
+  background: linear-gradient(to bottom right, rgba(42,39,36,0.58) 0%, rgba(42,39,36,0) 52%);
+  opacity: 0;
+}
+
+/* Permanent, faint, and only for the masthead. */
+.scrim--top {
+  background: linear-gradient(to bottom, rgba(42,39,36,0.34) 0%, rgba(42,39,36,0) 22%);
+}
+
+/* ------------------------------------------------------------ film type --- */
 
 .masthead {
   position: absolute;
@@ -121,7 +126,6 @@ a { color: inherit; text-decoration: none; }
   align-items: baseline;
   justify-content: space-between;
   padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1.25rem, 3.5vw, 2.75rem);
-  opacity: var(--type-opacity, 1);
 }
 
 .masthead__mark {
@@ -133,7 +137,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .masthead__nav { display: flex; gap: clamp(1rem, 2.5vw, 2rem); }
-.masthead__nav a { color: rgba(251,250,247,0.78); transition: color 200ms var(--ease); }
+.masthead__nav a { color: rgba(251,250,247,0.8); transition: color 200ms var(--ease); }
 .masthead__nav a:hover { color: var(--paper-raised); }
 
 /* Hangs lower-left. Asymmetry over centring -- the flower is the only thing
@@ -143,16 +147,15 @@ a { color: inherit; text-decoration: none; }
   left: clamp(1.25rem, 3.5vw, 2.75rem);
   bottom: clamp(2.5rem, 7vw, 4.5rem);
   max-width: min(52ch, 68%);
-  opacity: var(--type-opacity, 1);
 }
 
 /* Sits in the open upper-left the studio shot was composed to leave empty. */
 .aside {
   position: absolute;
-  top: clamp(4rem, 12vh, 8rem);
+  top: clamp(4.5rem, 13vh, 8.5rem);
   left: clamp(1.25rem, 3.5vw, 2.75rem);
   max-width: min(40ch, 46%);
-  opacity: var(--type-opacity, 0);
+  opacity: 0;
 }
 
 .statement__line,
@@ -171,10 +174,7 @@ a { color: inherit; text-decoration: none; }
 .aside__line     { font-size: clamp(2.25rem, 5.5vw, 4.75rem); margin-top: 0.75rem; }
 
 .statement__line em,
-.aside__line em {
-  font-style: italic;
-  color: var(--blush);
-}
+.aside__line em { font-style: italic; color: var(--blush); }
 
 .statement__sub,
 .aside__sub {
@@ -182,7 +182,7 @@ a { color: inherit; text-decoration: none; }
   max-width: 34ch;
   font-size: clamp(0.875rem, 1.1vw, 1rem);
   line-height: 1.5;
-  color: rgba(251,250,247,0.8);
+  color: rgba(251,250,247,0.82);
 }
 
 .cue {
@@ -192,10 +192,9 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  opacity: var(--type-opacity, 1);
 }
 
-.cue span { color: rgba(251,250,247,0.7); }
+.cue span { color: rgba(251,250,247,0.72); }
 
 .cue__rule {
   display: block;
@@ -296,18 +295,12 @@ a { color: inherit; text-decoration: none; }
 
 .footer strong { color: var(--ink); font-weight: 500; }
 
-/* ----------------------------------------------------- reduced motion --- */
+/* ------------------------------------------------------ reduced motion --- */
 
-/* The stills were composed to stand alone, so both scenes still read with
-   the camera moves removed entirely. STYLE.md §4. */
 @media (prefers-reduced-motion: reduce) {
-  .scene--hero, .scene--studio { height: 100vh; }
-  .scene__stage { position: relative; }
+  .film { height: 100vh; }
+  .film__stage { position: relative; }
   .cue__rule { animation: none; transform: scaleX(1); }
   .card { opacity: 1; transform: none; transition: none; }
-  .scene [data-layer="to"] { opacity: 0 !important; }
-  /* The studio scene's type has no arrival to ride in on, so it just sits. */
-  .aside { opacity: 1; }
-  .scene--studio [data-layer="to"] { opacity: 1 !important; }
-  .scene--studio [data-layer="from"] { opacity: 0 !important; }
+  .plate__still[data-still="bench"] { opacity: 0; }
 }

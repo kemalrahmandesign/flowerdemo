@@ -18,6 +18,7 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   --gutter: clamp(1rem, 5vw, 5rem);
+  --edge:   clamp(1.25rem, 3.5vw, 2.75rem);
 }
 
 * { box-sizing: border-box; }
@@ -43,7 +44,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink-soft);
 }
 
-.eyebrow--light { color: rgba(251,250,247,0.72); }
+.eyebrow--light { color: rgba(251,250,247,0.75); }
 
 /* ----------------------------------------------------------------- film --- */
 
@@ -54,22 +55,14 @@ a { color: inherit; text-decoration: none; }
   height: 600vh;
 }
 
+/* Full bleed, edge to edge. No inset, no border, no radius -- the footage
+   is the page. */
 .film__stage {
   position: sticky;
   top: 0;
   height: 100vh;
   height: 100svh;
   overflow: hidden;
-}
-
-/* --open is written by JS as a plain number, 1 (inset) to 0 (full bleed).
-   All unit arithmetic happens here so the animation loop never has to read
-   computed style -- see the performance note in main.js. */
-.film__panel {
-  position: absolute;
-  inset: calc(var(--gutter) * var(--open, 1));
-  overflow: hidden;
-  border-radius: calc(2px * var(--open, 1));
   background: var(--ink);
 }
 
@@ -91,7 +84,6 @@ a { color: inherit; text-decoration: none; }
 
 .plate__film { opacity: 0; }
 
-/* Swap to the film only once it is genuinely scrubbable. */
 .film[data-ready="true"] .plate__film { opacity: 1; }
 .film[data-ready="true"] .plate__still { display: none; }
 
@@ -101,20 +93,21 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
 }
 
-/* Each scrim protects one caption and fades with it, rather than sitting
-   there dimming the footage for its own sake. */
-.scrim--bottom {
-  background: linear-gradient(to top, rgba(42,39,36,0.46) 0%, rgba(42,39,36,0) 48%);
-}
-
-.scrim--corner {
-  background: linear-gradient(to bottom right, rgba(42,39,36,0.58) 0%, rgba(42,39,36,0) 52%);
-  opacity: 0;
-}
-
 /* Permanent, faint, and only for the masthead. */
-.scrim--top {
-  background: linear-gradient(to bottom, rgba(42,39,36,0.34) 0%, rgba(42,39,36,0) 22%);
+.scrim--masthead {
+  background: linear-gradient(to bottom, rgba(42,39,36,0.38) 0%, rgba(42,39,36,0) 20%);
+}
+
+/* Protects the opening statement in the upper third; fades out with it. */
+.scrim--hero {
+  background: linear-gradient(to bottom, rgba(42,39,36,0.44) 0%, rgba(42,39,36,0) 52%);
+}
+
+/* The macro beat sits centred, so this is a soft vignette rather than an
+   edge gradient. */
+.scrim--mid {
+  background: radial-gradient(ellipse at 50% 46%, rgba(42,39,36,0.5) 0%, rgba(42,39,36,0) 62%);
+  opacity: 0;
 }
 
 /* ------------------------------------------------------------ film type --- */
@@ -125,7 +118,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1.25rem, 3.5vw, 2.75rem);
+  padding: clamp(1.25rem, 3vw, 2.25rem) var(--edge);
 }
 
 .masthead__mark {
@@ -137,29 +130,36 @@ a { color: inherit; text-decoration: none; }
 }
 
 .masthead__nav { display: flex; gap: clamp(1rem, 2.5vw, 2rem); }
-.masthead__nav a { color: rgba(251,250,247,0.8); transition: color 200ms var(--ease); }
+.masthead__nav a { color: rgba(251,250,247,0.82); transition: color 200ms var(--ease); }
 .masthead__nav a:hover { color: var(--paper-raised); }
 
-/* Hangs lower-left. Asymmetry over centring -- the flower is the only thing
-   allowed to be centred. */
+/* Centred in the upper third, in the sky the wide shot leaves open. */
+/* Widths are in rem, not ch. A ch unit resolves against THIS element's font
+   size -- 16px here -- while the headline inside runs 44-122px, so ch-based
+   widths come out far too narrow and wrap the display type mid-phrase. */
 .statement {
   position: absolute;
-  left: clamp(1.25rem, 3.5vw, 2.75rem);
-  bottom: clamp(2.5rem, 7vw, 4.5rem);
-  max-width: min(52ch, 68%);
+  top: 19vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 46rem);
+  text-align: center;
 }
 
-/* Sits in the open upper-left the studio shot was composed to leave empty. */
-.aside {
+/* The macro beat, centred on the flower's own centre. */
+.midbeat {
   position: absolute;
-  top: clamp(4.5rem, 13vh, 8.5rem);
-  left: clamp(1.25rem, 3.5vw, 2.75rem);
-  max-width: min(40ch, 46%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 34rem);
+  text-align: center;
   opacity: 0;
 }
 
 .statement__line,
-.aside__line {
+.midbeat__line,
+.frost__line {
   margin: 0;
   font-family: var(--serif);
   font-weight: 400;
@@ -170,31 +170,75 @@ a { color: inherit; text-decoration: none; }
   color: var(--paper-raised);
 }
 
-.statement__line { font-size: clamp(3rem, 9vw, 8rem); }
-.aside__line     { font-size: clamp(2.25rem, 5.5vw, 4.75rem); margin-top: 0.75rem; }
+.statement__line { font-size: clamp(2.75rem, 7.5vw, 6.5rem); }
+.midbeat__line   { font-size: clamp(2rem, 4.6vw, 3.9rem); margin-top: 0.85rem; }
+.frost__line     { font-size: clamp(1.75rem, 3.2vw, 2.75rem); margin-top: 0.85rem; }
 
 .statement__line em,
-.aside__line em { font-style: italic; color: var(--blush); }
+.midbeat__line em,
+.frost__line em { font-style: italic; color: var(--blush); }
 
 .statement__sub,
-.aside__sub {
-  margin: clamp(1rem, 2vw, 1.5rem) 0 0;
-  max-width: 34ch;
+.frost__sub {
+  margin: clamp(1rem, 2vw, 1.5rem) auto 0;
+  max-width: 38ch;
   font-size: clamp(0.875rem, 1.1vw, 1rem);
   line-height: 1.5;
-  color: rgba(251,250,247,0.82);
+  color: rgba(251,250,247,0.84);
 }
+
+/* ---------------------------------------------------------------- frost --- */
+
+/* Frosted panel on the final worktable frame. The blur keeps the footage
+   readable behind the text instead of dimming it away.
+   backdrop-filter is compositing-expensive over a scrubbing video, so it is
+   only switched on by .is-live while the panel is actually visible. */
+.frost {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(3rem, 10vh, 7rem);
+  transform: translateX(-50%);
+  width: min(92vw, 34rem);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  text-align: center;
+  border-radius: 2px;
+  border: 1px solid rgba(251,250,247,0.18);
+  background: rgba(42,39,36,0.28);
+  opacity: 0;
+}
+
+.frost.is-live {
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
+}
+
+.frost__sub { margin-bottom: clamp(1.25rem, 2.5vw, 1.75rem); }
+
+.frost__cta {
+  display: inline-block;
+  padding: 0.85em 1.9em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-radius: 1px;
+  transition: background 200ms var(--ease), color 200ms var(--ease);
+}
+
+.frost__cta:hover { background: var(--blush); color: var(--ink); }
 
 .cue {
   position: absolute;
-  right: clamp(1.25rem, 3.5vw, 2.75rem);
+  right: var(--edge);
   bottom: clamp(2.5rem, 7vw, 4.5rem);
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.cue span { color: rgba(251,250,247,0.72); }
+.cue span { color: rgba(251,250,247,0.75); }
 
 .cue__rule {
   display: block;

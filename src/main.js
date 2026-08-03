@@ -2,26 +2,31 @@
  * FLOWERBX concept — one film, scrubbed by scroll.
  *
  * Scroll position through the runway becomes a single 0..1 value. That value
- * seeks one concatenated film and drives every caption. There is no source
- * switching, no crossfading between clips, and no per-scene state.
+ * seeks one concatenated film and drives every text moment.
+ *
+ * The film NEVER plays. It is paused for its entire life and moved only by
+ * currentTime. An earlier build looped the static head of the clip at rest to
+ * fake ambient wind, which fought the scrub -- playback and seeking were both
+ * touching currentTime, so the two took turns winning.
  *
  * Performance rules this file follows, learned the hard way:
  *
- *   1. NEVER read computed style in the loop. Earlier versions called
- *      getComputedStyle() every frame to resolve --gutter, which forces a
- *      style recalculation 60x a second. Now JS writes only unitless numbers
- *      into custom properties and CSS does the arithmetic in calc().
+ *   1. NEVER read computed style in the loop. An earlier version called
+ *      getComputedStyle() every frame, forcing a style recalculation 60x a
+ *      second for a value that never changed.
  *   2. Never write currentTime more precisely than the film can show. At
- *      20fps, seeks closer together than half a frame are invisible work,
- *      and each one still costs a decode.
- *   3. Nothing large is transformed. The film element is never scaled -- the
- *      camera move is baked into the footage, which is the whole point.
+ *      20fps, seeks closer than half a frame are invisible but still cost a
+ *      full decode.
+ *   3. backdrop-filter is only switched on while it is actually visible.
+ *      Blurring the backdrop of a scrubbing video re-runs the blur on every
+ *      decoded frame, which is exactly the kind of per-frame cost this file
+ *      exists to avoid.
  */
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const lerp = (a, b, t) => a + (b - a) * t;
 
-/** Remap v from [lo, hi] to 0..1, clamped. Every keyframe below is a range on
+/** Remap v from [lo, hi] to 0..1, clamped. Every moment below is a range on
  *  the same master progress, so they cannot drift apart. */
 function span(v, lo, hi) {
   if (hi === lo) return 0;
@@ -31,45 +36,35 @@ function span(v, lo, hi) {
 /**
  * Where things happen on the film's 0..1 timeline.
  *
- * The film is two generated clips concatenated, so the midpoint is roughly
- * where the push-in becomes the pull-back -- the moment the camera is deepest
- * inside the flower. Captions are placed either side of it.
+ * The film is two clips concatenated, so ~0.5 is the deepest point inside the
+ * flower -- the end of the push and the start of the pull-back. The three text
+ * moments are placed against that: one before, one on it, one at the far end.
  */
 const TIMELINE = {
-  // The opening statement has said its piece before the camera commits.
-  statementOut: [0, 0.16],
-  scrollCueOut: [0, 0.08],
-  // The studio caption arrives as the worktable resolves, landing in the
-  // open upper-left the shot was composed to leave empty.
-  asideIn: [0.70, 0.88],
-  // The panel opens from inset to full-bleed early, then stays open.
-  panelOpen: [0, 0.22],
+  statementOut: [0, 0.14],
+  scrollCueOut: [0, 0.07],
+  midIn:  [0.36, 0.45],
+  midOut: [0.55, 0.63],
+  frostIn: [0.82, 0.94],
 };
 
 /** Frames per second of the encoded film. Used to avoid sub-frame seeks. */
 const FPS = 20;
 
-/** Seconds at the head of the film that are near-static wind, before the
- *  camera starts moving. At rest we loop only this, which gives the ambient
- *  "everything is alive" state without a second file. */
-const AMBIENT_END = 1.5;
-
-/** Below this progress the film counts as at rest. */
-const REST = 0.012;
-
 const root = document.querySelector('[data-film]');
-const panel = document.querySelector('[data-panel]');
 const video = document.querySelector('[data-video]');
 const stillWide = document.querySelector('[data-still="wide"]');
 const stillBench = document.querySelector('[data-still="bench"]');
+
 const cues = {
   statement: document.querySelector('[data-cue="statement"]'),
-  aside: document.querySelector('[data-cue="aside"]'),
+  mid: document.querySelector('[data-cue="mid"]'),
+  frost: document.querySelector('[data-cue="frost"]'),
   scroll: document.querySelector('[data-cue="scroll"]'),
 };
 const scrims = {
-  bottom: document.querySelector('[data-scrim="bottom"]'),
-  corner: document.querySelector('[data-scrim="corner"]'),
+  hero: document.querySelector('[data-scrim="hero"]'),
+  mid: document.querySelector('[data-scrim="mid"]'),
 };
 
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -79,6 +74,7 @@ let current = 0;
 let ticking = false;
 let lastSeek = -1;
 let scrubbable = false;
+let frostLive = false;
 
 function readProgress() {
   const rect = root.getBoundingClientRect();
@@ -88,25 +84,34 @@ function readProgress() {
 }
 
 function draw(p) {
-  // Only unitless numbers cross the JS/CSS boundary. CSS resolves the units.
-  const open = span(p, ...TIMELINE.panelOpen);
-  panel.style.setProperty('--open', String(1 - open));
+  const statement = 1 - span(p, ...TIMELINE.statementOut);
+  // In, then back out: the beat belongs to the macro frame only.
+  const mid = Math.min(span(p, ...TIMELINE.midIn), 1 - span(p, ...TIMELINE.midOut));
+  const frost = span(p, ...TIMELINE.frostIn);
 
-  cues.statement.style.opacity = String(1 - span(p, ...TIMELINE.statementOut));
+  cues.statement.style.opacity = String(statement);
   cues.scroll.style.opacity = String(1 - span(p, ...TIMELINE.scrollCueOut));
-  cues.aside.style.opacity = String(span(p, ...TIMELINE.asideIn));
+  cues.mid.style.opacity = String(mid);
+  cues.frost.style.opacity = String(frost);
 
-  // Each scrim exists only to protect the caption above it, so it tracks
-  // that caption exactly rather than sitting there dimming the footage.
-  scrims.bottom.style.opacity = String(1 - span(p, ...TIMELINE.statementOut));
-  scrims.corner.style.opacity = String(span(p, ...TIMELINE.asideIn));
+  // Each scrim protects one text moment and fades with it, rather than
+  // sitting there dimming the footage for its own sake.
+  scrims.hero.style.opacity = String(statement);
+  scrims.mid.style.opacity = String(mid);
+
+  // Only composite the backdrop blur while the panel is actually on screen.
+  const wantFrost = frost > 0.001;
+  if (wantFrost !== frostLive) {
+    frostLive = wantFrost;
+    cues.frost.classList.toggle('is-live', wantFrost);
+  }
 
   if (scrubbable) scrub(p);
   else drawStills(p);
 }
 
 /** Fallback only. Both plates stay at scale >= 1 -- these are object-fit:
- *  cover, so anything below 1 stops covering the panel and punches a hole
+ *  cover, so anything below 1 stops covering the frame and punches a hole
  *  through to the background. */
 function drawStills(p) {
   const swap = span(p, 0.42, 0.62);
@@ -119,16 +124,6 @@ function drawStills(p) {
 function scrub(p) {
   const d = video.duration;
   if (!d || Number.isNaN(d)) return;
-
-  if (p <= REST) {
-    // At rest: let the wind play, looping only the static head.
-    if (video.paused) video.play().catch(() => {});
-    if (video.currentTime >= AMBIENT_END) video.currentTime = 0;
-    lastSeek = -1;
-    return;
-  }
-
-  if (!video.paused) video.pause();
 
   const t = p * d;
   // A seek finer than half a frame cannot be seen but still costs a decode.
@@ -153,8 +148,7 @@ function frame() {
   }
   // Smoothing factor. Higher = more attached to the finger, lower = more
   // filmic drift. At 0.12 the tail took ~0.6s to settle across the full
-  // range, which reads as lag even when decoding is instant. 0.18 keeps the
-  // weight without the rubber band.
+  // range, which reads as lag even when decoding is instant.
   current = lerp(current, target, 0.18);
   draw(current);
   requestAnimationFrame(frame);
@@ -197,10 +191,19 @@ function init() {
   // iOS Safari. Until then the stills carry the page rather than showing a
   // hero that stutters.
   video.addEventListener('canplaythrough', () => {
+    // Belt and braces: nothing should ever have started it, but a paused
+    // element is the invariant this whole file depends on.
+    video.pause();
     scrubbable = true;
     root.dataset.ready = 'true';
+    lastSeek = -1;
     draw(current);
   }, { once: true });
+
+  // If anything ever does start playback -- a stray gesture, a browser
+  // heuristic -- put it straight back to paused rather than letting it race
+  // the scrub.
+  video.addEventListener('play', () => video.pause());
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);

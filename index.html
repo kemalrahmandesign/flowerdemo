@@ -13,65 +13,72 @@
 <body>
 
 <!--
-  ONE film, ONE scrub, ONE runway.
+  ONE film, ONE scrub, full bleed.
 
-  The two generated clips are concatenated into a single 10s file, so there
-  is no source switching at runtime and no seam to hide -- scroll position
-  maps straight onto one continuous timeline. The film is encoded all-intra
-  at 20fps / 1280 wide (7MB): every frame is a keyframe, so a seek decodes
-  exactly one frame instead of chewing back to the previous keyframe.
-
-  Captions are keyed to ranges on that timeline (see TIMELINE in main.js).
-  The stills are the fallback only -- reduced motion, or video that never
-  becomes scrubbable.
+  The two generated clips are concatenated into a single 10s file, encoded
+  all-intra at 20fps so a seek decodes exactly one frame. The film NEVER
+  plays on its own -- it is paused for its entire life and moved only by
+  scroll position. Three text moments sit on that timeline: the opening
+  statement, a beat at the deepest point inside the flower, and a frosted
+  panel on the final worktable frame.
 -->
 <section class="film" data-film>
   <div class="film__stage">
-    <div class="film__panel" data-panel>
 
-      <div class="plate">
-        <!-- Fallback layers. Hidden the moment the film is scrubbable. -->
-        <img class="plate__still" data-still="wide" alt=""
-             src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png">
-        <img class="plate__still" data-still="bench" alt=""
-             src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_181420_7d452e52-0693-46c8-a404-f9bab046a2d5.png">
+    <div class="plate">
+      <!-- Fallback layers. Hidden the moment the film is scrubbable. -->
+      <img class="plate__still" data-still="wide" alt=""
+           src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png">
+      <img class="plate__still" data-still="bench" alt=""
+           src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_181420_7d452e52-0693-46c8-a404-f9bab046a2d5.png">
 
-        <!-- muted + playsinline are load-bearing on iOS, not decoration. -->
-        <video class="plate__film" data-video
-               src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/d1c66372-3efa-4ba3-9bc3-a213d514f952.mp4"
-               muted playsinline preload="auto" aria-hidden="true"></video>
+      <!-- muted + playsinline are load-bearing on iOS, not decoration.
+           No autoplay, no loop: this element is never played. -->
+      <video class="plate__film" data-video
+             src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/d1c66372-3efa-4ba3-9bc3-a213d514f952.mp4"
+             muted playsinline preload="auto" aria-hidden="true"></video>
 
-        <div class="scrim scrim--bottom" data-scrim="bottom" aria-hidden="true"></div>
-        <div class="scrim scrim--corner" data-scrim="corner" aria-hidden="true"></div>
-        <div class="scrim scrim--top" aria-hidden="true"></div>
-      </div>
-
-      <header class="masthead">
-        <a class="masthead__mark" href="#">FLOWERBX</a>
-        <nav class="masthead__nav">
-          <a href="#shop">Shop</a>
-          <a href="#shop">Studio</a>
-          <a href="#shop">Subscriptions</a>
-        </nav>
-      </header>
-
-      <div class="statement" data-cue="statement">
-        <h1 class="statement__line">Everything<br><em>in season</em></h1>
-        <p class="statement__sub">One flower, never mixed. Cut this morning, delivered before noon.</p>
-      </div>
-
-      <div class="aside" data-cue="aside">
-        <p class="eyebrow eyebrow--light">The studio</p>
-        <h2 class="aside__line">Tied by hand,<br><em>one at a time</em></h2>
-        <p class="aside__sub">No mixed bouquets. A single variety, wrapped in paper and twine, exactly as it left the field.</p>
-      </div>
-
-      <div class="cue" data-cue="scroll" aria-hidden="true">
-        <span>Scroll</span>
-        <i class="cue__rule"></i>
-      </div>
-
+      <div class="scrim scrim--masthead" aria-hidden="true"></div>
+      <div class="scrim scrim--hero" data-scrim="hero" aria-hidden="true"></div>
+      <div class="scrim scrim--mid" data-scrim="mid" aria-hidden="true"></div>
     </div>
+
+    <header class="masthead">
+      <a class="masthead__mark" href="#">FLOWERBX</a>
+      <nav class="masthead__nav">
+        <a href="#shop">Shop</a>
+        <a href="#shop">Studio</a>
+        <a href="#shop">Subscriptions</a>
+      </nav>
+    </header>
+
+    <!-- Centred in the upper third, where the wide shot was composed to
+         leave sky. Fades out as the camera commits. -->
+    <div class="statement" data-cue="statement">
+      <h1 class="statement__line">Everything<br><em>in season</em></h1>
+      <p class="statement__sub">One flower, never mixed. Cut this morning, delivered before noon.</p>
+    </div>
+
+    <!-- The beat at the deepest point of the push, on the macro centre. -->
+    <div class="midbeat" data-cue="mid">
+      <p class="eyebrow eyebrow--light">Single variety</p>
+      <p class="midbeat__line">One flower.<br><em>Nothing else.</em></p>
+    </div>
+
+    <!-- Lands on the final worktable frame. Frosted so the footage stays
+         legible behind it instead of being dimmed away. -->
+    <div class="frost" data-cue="frost">
+      <p class="eyebrow eyebrow--light">The studio</p>
+      <h2 class="frost__line">Tied by hand,<br><em>one at a time</em></h2>
+      <p class="frost__sub">No mixed bouquets. A single variety, wrapped in paper and twine, exactly as it left the field.</p>
+      <a class="frost__cta" href="#shop">Shop this week</a>
+    </div>
+
+    <div class="cue" data-cue="scroll" aria-hidden="true">
+      <span>Scroll</span>
+      <i class="cue__rule"></i>
+    </div>
+
   </div>
 </section>
 

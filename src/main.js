@@ -48,8 +48,15 @@ const TIMELINE = {
   frostIn: [0.82, 0.94],
 };
 
-/** Frames per second of the encoded film. Used to avoid sub-frame seeks. */
-const FPS = 20;
+/** Frames per second of the encoded film. Used to avoid sub-frame seeks.
+ *  30, not 24 or 20: scrubbing exposes every frame boundary when you scroll
+ *  slowly, so more frames is smoother -- the opposite of the tradeoff that
+ *  applies to normal playback. */
+const FPS = 30;
+
+/** Give up on a seek that never reports back, so a dropped 'seeked' event
+ *  cannot wedge the queue permanently. */
+const SEEK_TIMEOUT_MS = 400;
 
 const root = document.querySelector('[data-film]');
 const video = document.querySelector('[data-video]');
@@ -75,6 +82,11 @@ let ticking = false;
 let lastSeek = -1;
 let scrubbable = false;
 let frostLive = false;
+
+// Seek queue state. Exactly one seek is ever in flight; see requestSeek().
+let desiredTime = 0;
+let seekPending = false;
+let seekWatchdog = 0;
 
 function readProgress() {
   const rect = root.getBoundingClientRect();
@@ -121,16 +133,43 @@ function drawStills(p) {
   stillBench.style.transform = `scale(${lerp(1.6, 1, p)})`;
 }
 
+/**
+ * Seeking is ASYNCHRONOUS. Assigning currentTime while a previous seek is
+ * still in flight makes the browser abort and restart it, so writing on every
+ * animation frame -- 60 a second, against a decoder that can finish maybe
+ * 20-30 -- means most seeks are thrown away mid-flight and the picture
+ * lurches between whichever few survive.
+ *
+ * So: only ever one seek in flight. Record where we actually want to be, and
+ * when the current seek reports back, chase the latest target. Throughput
+ * then equals what the decoder can genuinely deliver, and every seek that
+ * starts is a seek that finishes.
+ */
 function scrub(p) {
   const d = video.duration;
   if (!d || Number.isNaN(d)) return;
+  desiredTime = p * d;
+  requestSeek();
+}
 
-  const t = p * d;
+function requestSeek() {
+  if (seekPending) return;
   // A seek finer than half a frame cannot be seen but still costs a decode.
-  if (lastSeek < 0 || Math.abs(t - lastSeek) >= 0.5 / FPS) {
-    video.currentTime = t;
-    lastSeek = t;
-  }
+  if (lastSeek >= 0 && Math.abs(desiredTime - lastSeek) < 0.5 / FPS) return;
+
+  seekPending = true;
+  lastSeek = desiredTime;
+  clearTimeout(seekWatchdog);
+  seekWatchdog = setTimeout(onSeekSettled, SEEK_TIMEOUT_MS);
+  video.currentTime = desiredTime;
+}
+
+function onSeekSettled() {
+  clearTimeout(seekWatchdog);
+  if (!seekPending) return;
+  seekPending = false;
+  // The target almost certainly moved while we were seeking. Chase it.
+  requestSeek();
 }
 
 function frame() {
@@ -190,6 +229,9 @@ function init() {
   // currentTime is unreliable until the file is fully buffered, especially on
   // iOS Safari. Until then the stills carry the page rather than showing a
   // hero that stutters.
+  // A seek reporting back is what lets the next one start.
+  video.addEventListener('seeked', onSeekSettled);
+
   video.addEventListener('canplaythrough', () => {
     // Belt and braces: nothing should ever have started it, but a paused
     // element is the invariant this whole file depends on.
@@ -197,6 +239,7 @@ function init() {
     scrubbable = true;
     root.dataset.ready = 'true';
     lastSeek = -1;
+    seekPending = false;
     draw(current);
   }, { once: true });
 

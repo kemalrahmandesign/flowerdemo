@@ -42,17 +42,29 @@ Worth recording, because every one of these is a trap you hit again.
 1. **The clips were never encoded for scrubbing.** Two 1080p24 files, ~31MB
    each, with a normal keyframe interval. Every `currentTime` write sent the
    decoder back to the previous keyframe and re-decoded forward — over 62MB of
-   video streamed from a CDN. The merged, all-intra, 20fps, 1280-wide film is
-   **7MB with all 202 frames as keyframes**, so a seek decodes exactly one.
-2. **A forced style recalculation every frame.** The draw loop called
+   video streamed from a CDN. The merged, all-intra, 30fps, 1280-wide film is
+   **7.4MB with all 303 frames as keyframes**, so a seek decodes exactly one.
+2. **Seeks were being issued faster than they could complete.** Seeking is
+   asynchronous: assigning `currentTime` while a previous seek is in flight
+   makes the browser abort and restart it. Writing on every animation frame —
+   60 a second, against a decoder that manages 20–30 — meant most seeks were
+   thrown away mid-flight and the picture lurched between whichever few
+   survived. Now exactly one seek is ever in flight and it chases the latest
+   target on completion. Measured at **100% completion rate, max 1 in
+   flight**, against a deliberately harder non-all-intra test clip.
+3. **20fps was the wrong encode.** Scrubbing exposes every frame boundary when
+   you scroll slowly, so more frames is smoother — the opposite of the
+   tradeoff that applies to normal playback. 30fps cost 6% more bytes for 50%
+   more frames.
+4. **A forced style recalculation every frame.** The draw loop called
    `getComputedStyle()` to resolve `--gutter`, 60× a second, for a value that
    never changes. Now JS writes only unitless numbers into custom properties
    and CSS does the arithmetic in `calc()`. Verified at zero calls during a
    scroll burst.
-3. **Two video elements both `preload="auto"`**, both decoding, both with
+5. **Two video elements both `preload="auto"`**, both decoding, both with
    `will-change` pinning large textures in GPU memory. Now one film, and
    `will-change` only on the fallback stills.
-4. **Sub-frame seeks.** At 20fps, `currentTime` writes closer together than
+6. **Sub-frame seeks.** At 30fps, `currentTime` writes closer together than
    half a frame are invisible but still cost a decode. They are now skipped.
 
 There is also a rule the layout depends on: the plates are `object-fit:
@@ -63,13 +75,13 @@ incoming layer from above 1, never by shrinking anything.
 ## Rebuilding the film
 
 `./scripts/vendor.sh` downloads the source clips and stills, merges the clips,
-re-encodes all-intra, verifies the keyframe count, and repoints `index.html`
+re-encodes all-intra at 30fps, verifies the keyframe count, and repoints `index.html`
 at the local files. Needs `ffmpeg` (`brew install ffmpeg`).
 
 Run it before this goes anywhere real — the CDN URLs are generation
 artifacts, not hosting, and they can rotate.
 
-If 7MB is still too heavy, the escalation is an image sequence: ~200 WebP
+If 7.4MB is still too heavy, the escalation is an image sequence: ~300 WebP
 frames painted to a canvas. Heavier to set up, but the most bulletproof
 scrubbing there is.
 
@@ -80,7 +92,12 @@ scrubbing there is.
 | Pace of the whole move | `.film { height: 600vh }` | Longer runway = slower, more deliberate. |
 | Caption timing | `TIMELINE` in `main.js` | Ranges on the film's 0..1 timeline. |
 | Scrub smoothing | `lerp(current, target, 0.18)` | Higher = attached to the finger. Below ~0.12 the tail reads as lag. |
-| Ambient loop length | `AMBIENT_END` | Seconds of static wind at the head, looped at rest. |
+| Seek granularity | `FPS` in `main.js` | Must match the encode. Seeks finer than half a frame are skipped. |
+
+The film never plays. It is paused for its whole life and moved only by
+`currentTime`. An earlier build looped the static head of the clip at rest to
+fake ambient wind, which fought the scrub — playback and seeking were both
+driving `currentTime` and took turns winning.
 
 ## Known gaps
 

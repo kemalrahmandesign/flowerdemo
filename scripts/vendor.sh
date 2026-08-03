@@ -22,7 +22,7 @@ BENCH="hf_20260803_181420_7d452e52-0693-46c8-a404-f9bab046a2d5.png"
 CLIP1="hf_20260803_173022_c28da1c8-06c3-4a57-892a-e511b65b50d7.mp4"
 CLIP2="hf_20260803_184958_304a9ce1-0d9a-4ec5-9ed0-1bef1e7829f4.mp4"
 
-FILM_CDN="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/d1c66372-3efa-4ba3-9bc3-a213d514f952.mp4"
+FILM_CDN="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/11d6d242-5bfe-478f-b2ed-53443091e48c.mp4"
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "ffmpeg not found."
@@ -46,16 +46,17 @@ echo "==> Merging and encoding for scrubbing"
 # concat  : one continuous timeline, so nothing switches source at runtime
 # scale   : 1280 wide -- scrub smoothness matters more than pixel count on a
 #           shot that is always in motion
-# fps=20  : the temporal resolution scroll actually needs; roughly halves the
-#           frames, and therefore the bytes, versus the 24fps source
+# fps=30  : scrubbing exposes every frame boundary when you scroll slowly, so
+#           MORE frames is smoother -- the opposite of the tradeoff that
+#           applies to normal playback
 # -g 1 …  : every frame a keyframe, so a seek decodes exactly ONE frame.
 #           This is the setting that makes scrubbing feel attached to the
 #           finger rather than lurching.
 ffmpeg -y -loglevel error \
   -i public/media/_clip1.mp4 -i public/media/_clip2.mp4 \
-  -filter_complex "[0:v][1:v]concat=n=2:v=1:a=0[c];[c]scale=1280:-2,fps=20[v]" \
+  -filter_complex "[0:v][1:v]concat=n=2:v=1:a=0[c];[c]scale=1280:-2,fps=30[v]" \
   -map "[v]" \
-  -c:v libx264 -preset slow -crf 20 \
+  -c:v libx264 -preset slow -crf 22 \
   -g 1 -keyint_min 1 -sc_threshold 0 \
   -pix_fmt yuv420p -movflags +faststart -an \
   public/media/film.mp4

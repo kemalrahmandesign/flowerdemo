@@ -89,7 +89,14 @@ between them — a palette shift mid-scrub reads as a glitch.
 
 > muted desaturated editorial palette, bone and cream and pale sage green, a
 > single note of soft blush, soft diffused overcast light, extremely shallow
-> depth of field, fine 35mm film grain, calm and still, no vivid saturation
+> depth of field, fine 35mm film grain, gentle halation, nostalgic analog
+> cinematic feel like a remembered film, calm and still, no vivid saturation
+
+The nostalgia note is doing more work than it looks. Grain and halation soften
+exactly the edges where generated footage betrays itself — over-crisp petal
+boundaries, too-clean gradients — so the analog treatment buys authenticity as
+well as mood. Keep it on every asset, stills included, or the video will not
+cut against them.
 
 **Always exclude** (the failure modes of AI garden footage):
 

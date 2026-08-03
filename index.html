@@ -32,9 +32,18 @@
         <img class="plate__layer" data-layer="macro" alt=""
              src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_3105b6d4-d68a-4705-89f5-2b58186d4342.png">
 
-        <!-- Populated when data-mode="video". Muted + playsinline are load-
-             bearing on iOS, not decoration. -->
+        <!-- Muted + playsinline are load-bearing on iOS, not decoration.
+             Mode flips to video on canplaythrough only -- currentTime is
+             unreliable until the clip is fully buffered.
+
+             This points at the CDN so the move can be reviewed in context
+             immediately. Before this goes anywhere real, vendor the file to
+             public/media/push-in.mp4 and run the all-intra re-encode in the
+             README: buffering alone fixes seek stalls, but a default keyframe
+             interval still makes the decoder chew through dozens of frames
+             per scrub. -->
         <video class="plate__layer plate__layer--video" data-layer="video"
+               src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_173022_c28da1c8-06c3-4a57-892a-e511b65b50d7.mp4"
                muted playsinline preload="auto" aria-hidden="true"></video>
 
         <div class="plate__scrim" aria-hidden="true"></div>

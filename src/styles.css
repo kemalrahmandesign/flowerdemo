@@ -1,0 +1,279 @@
+/* Fieldnote — see STYLE.md. Every value here traces back to that document;
+   if you change a token, change it there too. */
+
+:root {
+  --paper:        #F5F2EC;
+  --paper-raised: #FBFAF7;
+  --ink:          #2A2724;
+  --ink-soft:     #6B655D;
+  --sage:         #8A9080;
+  --stem:         #4A5244;
+  --blush:        #D9B5AC;
+
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Entrance easing. Scroll-driven motion is deliberately NOT eased --
+     it tracks the finger linearly. STYLE.md §4.2. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --gutter: clamp(1rem, 5vw, 5rem);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: auto; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.eyebrow,
+.masthead__nav a,
+.cue span {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* ---------------------------------------------------------------- hero --- */
+
+/* The runway. Its height is the scroll budget for the whole push-in --
+   longer feels slower and more deliberate, shorter feels urgent. */
+.hero {
+  height: 340vh;
+  position: relative;
+}
+
+.hero__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* Inset at rest, full-bleed by the end of the push. The inset is what makes
+   this read as print rather than as a stock-video header. */
+.hero__panel {
+  position: absolute;
+  inset: var(--panel-inset, var(--gutter));
+  overflow: hidden;
+  border-radius: var(--panel-radius, 2px);
+  background: var(--ink);
+  transition: none;
+}
+
+.plate {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.plate__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+.plate__layer--video { display: none; }
+.hero[data-mode="video"] .plate__layer--video { display: block; }
+.hero[data-mode="video"] [data-layer="wide"],
+.hero[data-mode="video"] [data-layer="macro"] { display: none; }
+
+/* Keeps the type legible without dimming the whole image. Weighted to the
+   lower-left, where the statement sits. */
+.plate__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(42,39,36,0.42) 0%, rgba(42,39,36,0) 46%),
+    linear-gradient(to bottom, rgba(42,39,36,0.28) 0%, rgba(42,39,36,0) 30%);
+  opacity: var(--scrim-opacity, 1);
+  pointer-events: none;
+}
+
+.masthead {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1.25rem, 3.5vw, 2.75rem);
+  opacity: var(--type-opacity, 1);
+}
+
+.masthead__mark {
+  font-family: var(--serif);
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  letter-spacing: -0.01em;
+  color: var(--paper-raised);
+}
+
+.masthead__nav { display: flex; gap: clamp(1rem, 2.5vw, 2rem); }
+.masthead__nav a { color: rgba(251,250,247,0.78); transition: color 200ms var(--ease); }
+.masthead__nav a:hover { color: var(--paper-raised); }
+
+/* Hangs at the lower-left of the panel. Asymmetry over centering --
+   the flower is the only thing allowed to be centred. */
+.statement {
+  position: absolute;
+  left: clamp(1.25rem, 3.5vw, 2.75rem);
+  bottom: clamp(2.5rem, 7vw, 4.5rem);
+  max-width: min(52ch, 68%);
+  opacity: var(--type-opacity, 1);
+}
+
+.statement__line {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  /* Deliberately slightly too large, tight leading, negative tracking.
+     STYLE.md §2. */
+  font-size: clamp(3rem, 9vw, 8rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--paper-raised);
+}
+
+.statement__line em {
+  font-style: italic;
+  color: var(--blush);
+}
+
+.statement__sub {
+  margin: clamp(1rem, 2vw, 1.5rem) 0 0;
+  max-width: 34ch;
+  font-size: clamp(0.875rem, 1.1vw, 1rem);
+  line-height: 1.5;
+  color: rgba(251,250,247,0.8);
+}
+
+.cue {
+  position: absolute;
+  right: clamp(1.25rem, 3.5vw, 2.75rem);
+  bottom: clamp(2.5rem, 7vw, 4.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  opacity: var(--type-opacity, 1);
+}
+
+.cue span { color: rgba(251,250,247,0.7); }
+
+.cue__rule {
+  display: block;
+  width: 56px;
+  height: 1px;
+  background: rgba(251,250,247,0.45);
+  transform-origin: right center;
+  animation: cue-draw 2.8s var(--ease) infinite;
+}
+
+@keyframes cue-draw {
+  0%, 100% { transform: scaleX(0.35); opacity: 0.45; }
+  50%      { transform: scaleX(1);    opacity: 0.9; }
+}
+
+/* ---------------------------------------------------------------- shop --- */
+
+.shop {
+  position: relative;
+  z-index: 1;
+  background: var(--paper);
+  padding: clamp(6rem, 14vh, 12rem) var(--gutter) clamp(4rem, 8vh, 7rem);
+}
+
+.shop__intro { max-width: 1240px; margin: 0 auto clamp(3rem, 6vh, 5rem); }
+
+.eyebrow { margin: 0 0 1rem; }
+
+.shop__title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: clamp(1.25rem, 2.5vw, 2.25rem);
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+/* Reveal is staggered by index via --i, set in the markup order. Entrance
+   motion, so it eases -- unlike anything scroll-driven. */
+.card {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 700ms var(--ease) calc(var(--i, 0) * 90ms),
+    transform 700ms var(--ease) calc(var(--i, 0) * 90ms);
+}
+
+.shop.is-revealed .card { opacity: 1; transform: none; }
+
+.card__frame {
+  aspect-ratio: 4 / 5;
+  background: var(--paper-raised);
+  border: 1px solid rgba(138,144,128,0.28);
+  border-radius: 2px;
+}
+
+.card__meta { padding-top: 1rem; }
+
+.card__meta h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.card__meta p {
+  margin: 0.25rem 0 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+.card__meta span { font-size: 0.875rem; font-weight: 500; }
+.card__meta span i { font-style: normal; color: var(--ink-soft); }
+
+.footer {
+  padding: 0 var(--gutter) clamp(3rem, 6vh, 5rem);
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.footer p { max-width: 1240px; margin: 0 auto; padding-top: 2rem; border-top: 1px solid rgba(138,144,128,0.28); }
+
+/* --------------------------------------------------------- reduced motion */
+
+/* The stills were composed to stand alone, so the hero still reads with the
+   camera move removed entirely. STYLE.md §4. */
+@media (prefers-reduced-motion: reduce) {
+  .hero { height: 100vh; }
+  .hero__stage { position: relative; }
+  .cue__rule { animation: none; transform: scaleX(1); }
+  .card { opacity: 1; transform: none; transition: none; }
+  [data-layer="macro"] { opacity: 0 !important; }
+}

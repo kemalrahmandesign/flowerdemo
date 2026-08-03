@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fieldnote — Seasonal flowers, quietly arranged</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+
+<!--
+  The hero is a tall scroll runway with a sticky stage inside it. Scroll
+  position through the runway becomes a 0..1 progress value that drives the
+  camera push. See src/main.js.
+
+  Two source modes, switched by data-mode on the hero:
+    "stills" - two layered images faked into a push-in. Runs today, and is
+               also the permanent fallback for reduced-motion and for any
+               browser that refuses to scrub video.
+    "video"  - a single scrubbed clip. Drop the file in and flip the mode.
+-->
+<section class="hero" data-hero data-mode="stills">
+  <div class="hero__stage">
+    <div class="hero__panel" data-panel>
+
+      <div class="plate" data-plate>
+        <img class="plate__layer" data-layer="wide" alt=""
+             src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png">
+        <img class="plate__layer" data-layer="macro" alt=""
+             src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_3105b6d4-d68a-4705-89f5-2b58186d4342.png">
+
+        <!-- Populated when data-mode="video". Muted + playsinline are load-
+             bearing on iOS, not decoration. -->
+        <video class="plate__layer plate__layer--video" data-layer="video"
+               muted playsinline preload="auto" aria-hidden="true"></video>
+
+        <div class="plate__scrim" aria-hidden="true"></div>
+      </div>
+
+      <header class="masthead" data-fade>
+        <a class="masthead__mark" href="#">Fieldnote</a>
+        <nav class="masthead__nav">
+          <a href="#shop">Shop</a>
+          <a href="#">Subscriptions</a>
+          <a href="#">Studio</a>
+        </nav>
+      </header>
+
+      <div class="statement" data-fade>
+        <h1 class="statement__line">Everything<br><em>in season</em></h1>
+        <p class="statement__sub">Cut this morning, arranged by hand, delivered before noon.</p>
+      </div>
+
+      <div class="cue" data-fade aria-hidden="true">
+        <span>Scroll</span>
+        <i class="cue__rule"></i>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- The handoff. Rises out of the macro frame as the push-in lands. -->
+<section class="shop" id="shop" data-shop>
+  <div class="shop__intro">
+    <p class="eyebrow">This week</p>
+    <h2 class="shop__title">Four stems worth<br>the whole garden</h2>
+  </div>
+
+  <ul class="grid">
+    <li class="card">
+      <div class="card__frame"></div>
+      <div class="card__meta"><h3>The Ranunculus</h3><p>Cream, single variety</p><span>£48</span></div>
+    </li>
+    <li class="card">
+      <div class="card__frame"></div>
+      <div class="card__meta"><h3>Field Bundle</h3><p>Mixed stems, wrapped</p><span>£36</span></div>
+    </li>
+    <li class="card">
+      <div class="card__frame"></div>
+      <div class="card__meta"><h3>Standing Order</h3><p>Weekly, no two alike</p><span>£32<i>/wk</i></span></div>
+    </li>
+    <li class="card">
+      <div class="card__frame"></div>
+      <div class="card__meta"><h3>The Small One</h3><p>Desk size, one hand</p><span>£22</span></div>
+    </li>
+  </ul>
+</section>
+
+<footer class="footer">
+  <p>Fieldnote — placeholder name, demo build</p>
+</footer>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

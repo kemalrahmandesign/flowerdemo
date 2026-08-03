@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+# Deploys from the feature branch rather than the default branch, since that
+# is where this demo lives. Pages source must be set to "GitHub Actions" in
+# repo Settings -> Pages for this workflow to be the thing that ships.
+on:
+  push:
+    branches: ["claude/flower-shop-hero-section-a2026s"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; keep the newest, drop the in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # No build step -- the site is plain static HTML/CSS/JS by design, and
+      # every path in index.html is relative, so it works unchanged under the
+      # /<repo>/ subpath that project Pages serve from.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

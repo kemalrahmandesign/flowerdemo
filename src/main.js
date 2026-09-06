@@ -1,49 +1,14 @@
 /**
- * FLOWERBX concept.
+ * FLOWERBX — hero scene.
  *
- * The film loops on its own clock -- it is no longer scrubbed. Scroll drives
- * only the text moments, and the hero headline assembles itself out of the
- * wind on load.
+ * One looping film, one headline that assembles itself out of the wind on
+ * load. No scroll, no scrubbing: the film is encoded for playback and left
+ * to play.
  */
 
-const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
-const lerp = (a, b, t) => a + (b - a) * t;
-
-/** Remap v from [lo, hi] to 0..1, clamped. Every moment below is a range on
- *  the same master progress, so they cannot drift apart. */
-function span(v, lo, hi) {
-  if (hi === lo) return 0;
-  return clamp((v - lo) / (hi - lo), 0, 1);
-}
-
-/** Where the text moments sit on the scroll runway. With the film on its own
- *  clock these are no longer pinned to particular frames -- they are purely
- *  positions in the scroll. */
-const TIMELINE = {
-  statementOut: [0, 0.18],
-  scrollCueOut: [0, 0.10],
-  midIn:  [0.30, 0.42],
-  midOut: [0.52, 0.62],
-  frostIn: [0.74, 0.90],
-};
-
-const root = document.querySelector('[data-film]');
+const root = document.querySelector('[data-hero]');
 const video = document.querySelector('[data-video]');
-
-const cues = {
-  statement: document.querySelector('[data-cue="statement"]'),
-  mid: document.querySelector('[data-cue="mid"]'),
-  frost: document.querySelector('[data-cue="frost"]'),
-  scroll: document.querySelector('[data-cue="scroll"]'),
-};
-const scrims = {
-  hero: document.querySelector('[data-scrim="hero"]'),
-  mid: document.querySelector('[data-scrim="mid"]'),
-};
-
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-/* ------------------------------------------------------------- reveal --- */
 
 /**
  * Split text into per-glyph spans so the headline can reassemble out of the
@@ -55,7 +20,7 @@ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
  * spaces rather than between letters.
  *
  * Per-glyph offsets are randomised. An identical offset on every letter reads
- * as a mechanical slide; varying them is what makes it look like air moved
+ * as a mechanical slide; the variation is what makes it look like air moved
  * each one separately.
  */
 function splitGlyphs(el) {
@@ -64,8 +29,8 @@ function splitGlyphs(el) {
   const label = document.createElement('div');
   label.innerHTML = el.innerHTML.replace(/<br\s*\/?>/gi, ' ');
   el.setAttribute('aria-label', label.textContent.replace(/\s+/g, ' ').trim());
-  let i = 0;
 
+  let i = 0;
   const walk = (node) => {
     [...node.childNodes].forEach((child) => {
       if (child.nodeType === Node.TEXT_NODE) {
@@ -105,9 +70,10 @@ function splitGlyphs(el) {
 }
 
 async function startReveal() {
-  const targets = document.querySelectorAll('[data-reveal]');
   let total = 0;
-  targets.forEach((el) => { total = Math.max(total, splitGlyphs(el)); });
+  document.querySelectorAll('[data-reveal]').forEach((el) => {
+    total = Math.max(total, splitGlyphs(el));
+  });
 
   // Holds the split glyphs invisible until the run starts. Scoped to an
   // attribute only this function sets, so a script failure leaves plain
@@ -130,111 +96,22 @@ async function startReveal() {
   root.dataset.revealing = 'true';
 }
 
-/* --------------------------------------------------------------- scroll --- */
-
-let target = 0;
-let current = 0;
-let ticking = false;
-let frostLive = false;
-
-function readProgress() {
-  const rect = root.getBoundingClientRect();
-  const runway = root.offsetHeight - window.innerHeight;
-  if (runway <= 0) return 0;
-  return clamp(-rect.top / runway, 0, 1);
-}
-
-function draw(p) {
-  const statement = 1 - span(p, ...TIMELINE.statementOut);
-  // In, then back out: the beat is a passing thought, not a caption.
-  const mid = Math.min(span(p, ...TIMELINE.midIn), 1 - span(p, ...TIMELINE.midOut));
-  const frost = span(p, ...TIMELINE.frostIn);
-
-  cues.statement.style.opacity = String(statement);
-  cues.scroll.style.opacity = String(1 - span(p, ...TIMELINE.scrollCueOut));
-  cues.mid.style.opacity = String(mid);
-  cues.frost.style.opacity = String(frost);
-
-  // Each scrim protects one text moment and fades with it, rather than
-  // sitting there dimming the footage for its own sake.
-  scrims.hero.style.opacity = String(statement);
-  scrims.mid.style.opacity = String(mid);
-
-  // Only composite the backdrop blur while the panel is on screen. Blurring
-  // the backdrop of a playing video re-runs the blur on every decoded frame.
-  const wantFrost = frost > 0.001;
-  if (wantFrost !== frostLive) {
-    frostLive = wantFrost;
-    cues.frost.classList.toggle('is-live', wantFrost);
-  }
-}
-
-function frame() {
-  target = readProgress();
-  const delta = target - current;
-  // Snap once further interpolation would be invisible, so the loop can go
-  // idle instead of chasing forever.
-  if (Math.abs(delta) < 0.0002) {
-    if (current !== target) {
-      current = target;
-      draw(current);
-    }
-    ticking = false;
-    return;
-  }
-  current = lerp(current, target, 0.18);
-  draw(current);
-  requestAnimationFrame(frame);
-}
-
-function onScroll() {
-  if (!ticking) {
-    ticking = true;
-    requestAnimationFrame(frame);
-  }
-}
-
-function revealShop() {
-  const shop = document.querySelector('[data-shop]');
-  shop.querySelectorAll('.card').forEach((card, i) => {
-    card.style.setProperty('--i', String(i));
-  });
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        shop.classList.add('is-revealed');
-        observer.disconnect();
-      }
-    });
-  }, { threshold: 0.15 });
-  observer.observe(shop);
-}
-
 function init() {
-  revealShop();
-
   if (reduced.matches) {
     // No looping footage and no assembling text. The poster frame was
     // composed to stand alone, so the hero still reads.
     video.removeAttribute('autoplay');
     video.pause();
-    draw(0);
     return;
   }
 
   startReveal();
 
-  // Autoplay can still be refused (battery saver, some mobile data-saver
-  // modes). The poster frame is already the fallback, so there is nothing to
-  // repair -- just do not let the rejection surface as an unhandled error.
+  // Autoplay can still be refused (battery saver, some data-saver modes).
+  // The poster frame is already the fallback, so there is nothing to repair --
+  // just do not let the rejection surface as an unhandled error.
   const attempt = video.play();
   if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
-
-  target = current = readProgress();
-  draw(current);
 }
 
 init();

@@ -3,104 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FLOWERBX — concept redesign</title>
-<meta name="description" content="An unofficial concept redesign for FLOWERBX. Single-variety flowers, cut and tied by hand.">
+<title>FLOWERBX — hero scene</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./src/styles.css">
+<!-- ?v= is a cache buster. GitHub Pages serves assets with a 10 minute
+     cache, so without it a new index.html happily runs the previous
+     main.js. Bump it whenever the CSS or JS changes. -->
+<link rel="stylesheet" href="./src/styles.css?v=4">
 </head>
 <body>
 
 <!--
-  The film loops on its own clock. It is no longer scrubbed by scroll, so
-  the text moments are timed against the scroll runway alone rather than
-  against particular frames.
-
-  poster = the opening still, which is also what shows for reduced motion,
-  where the loop is suppressed entirely.
+  Hero scene only. One full-bleed looping film, one headline that assembles
+  itself out of the wind on load. No scroll, no sections, nothing below.
 -->
-<section class="film" data-film>
-  <div class="film__stage">
+<section class="hero" data-hero>
 
-    <video class="plate__film" data-video
-           src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/11d6d242-5bfe-478f-b2ed-53443091e48c.mp4"
-           poster="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png"
-           autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+  <!-- Encoded for PLAYBACK: normal GOP and native 24fps. The previous file
+       was all-intra at a forced 30fps, which is right for scrubbing and wrong
+       for playing -- see README. Ping-pong (forward then reversed) so the
+       loop point is the last frame meeting itself, with no cut back to the
+       garden. -->
+  <video class="hero__film" data-video
+         src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/1bfb98f1-26e2-4ee1-804a-fc78b8e3a065.mp4"
+         poster="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png"
+         autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
 
-    <div class="scrim scrim--masthead" aria-hidden="true"></div>
-    <div class="scrim scrim--hero" data-scrim="hero" aria-hidden="true"></div>
-    <div class="scrim scrim--mid" data-scrim="mid" aria-hidden="true"></div>
+  <div class="scrim" aria-hidden="true"></div>
 
-    <header class="masthead">
-      <a class="masthead__mark" href="#">FLOWERBX</a>
-      <nav class="masthead__nav">
-        <a href="#shop">Shop</a>
-        <a href="#shop">Studio</a>
-        <a href="#shop">Subscriptions</a>
-      </nav>
-    </header>
+  <header class="masthead">
+    <span class="masthead__mark">FLOWERBX</span>
+    <nav class="masthead__nav">
+      <span>Shop</span>
+      <span>Studio</span>
+      <span>Subscriptions</span>
+    </nav>
+  </header>
 
-    <!-- data-reveal marks text that assembles out of the wind on load. -->
-    <div class="statement" data-cue="statement">
-      <h1 class="statement__line" data-reveal>Everything<br><em>in season</em></h1>
-      <p class="statement__sub" data-reveal-after>One flower, never mixed. Cut this morning, delivered before noon.</p>
-    </div>
-
-    <div class="midbeat" data-cue="mid">
-      <p class="eyebrow eyebrow--light">Single variety</p>
-      <p class="midbeat__line">One flower.<br><em>Nothing else.</em></p>
-    </div>
-
-    <div class="frost" data-cue="frost">
-      <p class="eyebrow eyebrow--light">The studio</p>
-      <h2 class="frost__line">Tied by hand,<br><em>one at a time</em></h2>
-      <p class="frost__sub">No mixed bouquets. A single variety, wrapped in paper and twine, exactly as it left the field.</p>
-      <a class="frost__cta" href="#shop">Shop this week</a>
-    </div>
-
-    <div class="cue" data-cue="scroll" aria-hidden="true">
-      <span>Scroll</span>
-      <i class="cue__rule"></i>
-    </div>
-
-  </div>
-</section>
-
-<section class="shop" id="shop" data-shop>
-  <div class="shop__intro">
-    <p class="eyebrow">This week</p>
-    <h2 class="shop__title">Four stems worth<br>the whole garden</h2>
+  <div class="statement">
+    <h1 class="statement__line" data-reveal>Everything<br><em>in season</em></h1>
+    <p class="statement__sub" data-reveal-after>One flower, never mixed. Cut this morning, delivered before noon.</p>
   </div>
 
-  <ul class="grid">
-    <li class="card">
-      <div class="card__frame"></div>
-      <div class="card__meta"><h3>The Ranunculus</h3><p>Cream, single variety</p><span>£48</span></div>
-    </li>
-    <li class="card">
-      <div class="card__frame"></div>
-      <div class="card__meta"><h3>Field Bundle</h3><p>Single variety, wrapped</p><span>£36</span></div>
-    </li>
-    <li class="card">
-      <div class="card__frame"></div>
-      <div class="card__meta"><h3>Standing Order</h3><p>Weekly, no two alike</p><span>£32<i>/wk</i></span></div>
-    </li>
-    <li class="card">
-      <div class="card__frame"></div>
-      <div class="card__meta"><h3>The Small One</h3><p>Desk size, one hand</p><span>£22</span></div>
-    </li>
-  </ul>
+  <!-- Unofficial-concept credit. One line; delete it if it is in the way of
+       a clean capture. -->
+  <p class="credit">Unofficial concept — not affiliated with FLOWERBX Ltd.</p>
+
 </section>
 
-<footer class="footer">
-  <p>
-    <strong>Unofficial concept redesign.</strong> Not affiliated with, endorsed by, or
-    connected to FLOWERBX Ltd. A design study built for demonstration — the products,
-    prices and imagery above are fictional and are not offered for sale.
-  </p>
-</footer>
-
-<script type="module" src="./src/main.js"></script>
+<script type="module" src="./src/main.js?v=4"></script>
 </body>
 </html>

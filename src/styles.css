@@ -1,75 +1,44 @@
-/* FLOWERBX concept — see STYLE.md. Every value here traces back to that
-   document; if you change a token, change it there too. */
+/* FLOWERBX — hero scene. See STYLE.md for the palette and type rationale. */
 
 :root {
-  --paper:        #F5F2EC;
   --paper-raised: #FBFAF7;
   --ink:          #2A2724;
-  --ink-soft:     #6B655D;
-  --sage:         #8A9080;
-  --stem:         #4A5244;
   --blush:        #D9B5AC;
 
   --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   --sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Entrance easing. Scroll-driven motion is deliberately NOT eased --
-     it tracks the finger linearly. STYLE.md §4.2. */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-
-  --gutter: clamp(1rem, 5vw, 5rem);
-  --edge:   clamp(1.25rem, 3.5vw, 2.75rem);
+  --edge: clamp(1.25rem, 3.5vw, 2.75rem);
 }
 
 * { box-sizing: border-box; }
 
+html, body { height: 100%; }
+
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--paper-raised);
   font-family: var(--sans);
   font-weight: 400;
+  overflow: hidden;          /* one screen, nothing to scroll to */
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: inherit; text-decoration: none; }
+/* ----------------------------------------------------------------- hero --- */
 
-.eyebrow,
-.masthead__nav a,
-.cue span {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.eyebrow--light { color: rgba(251,250,247,0.75); }
-
-/* ----------------------------------------------------------------- film --- */
-
-/* Runway height is the scroll budget for the whole 10s film. Longer feels
-   slower and more deliberate; shorter feels urgent. */
-.film {
+.hero {
   position: relative;
-  height: 300vh;
-}
-
-/* Full bleed, edge to edge. No inset, no border, no radius -- the footage
-   is the page. */
-.film__stage {
-  position: sticky;
-  top: 0;
+  width: 100vw;
   height: 100vh;
   height: 100svh;
   overflow: hidden;
   background: var(--ink);
 }
 
-/* The film loops on its own clock. Its poster frame covers the gap before
-   the first frame decodes, and stands in entirely when autoplay is refused
-   or reduced motion is set. */
-.plate__film {
+/* Full bleed, edge to edge. The footage is the page. */
+.hero__film {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -77,30 +46,16 @@ a { color: inherit; text-decoration: none; }
   object-fit: cover;
 }
 
+/* Enough to hold the type legible, weighted top where the type sits, and
+   not so heavy that it dulls the footage. */
 .scrim {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(42,39,36,0.52) 0%, rgba(42,39,36,0.06) 46%, rgba(42,39,36,0) 62%),
+    linear-gradient(to top,    rgba(42,39,36,0.30) 0%, rgba(42,39,36,0) 24%);
 }
-
-/* Permanent, faint, and only for the masthead. */
-.scrim--masthead {
-  background: linear-gradient(to bottom, rgba(42,39,36,0.38) 0%, rgba(42,39,36,0) 20%);
-}
-
-/* Protects the opening statement in the upper third; fades out with it. */
-.scrim--hero {
-  background: linear-gradient(to bottom, rgba(42,39,36,0.44) 0%, rgba(42,39,36,0) 52%);
-}
-
-/* The macro beat sits centred, so this is a soft vignette rather than an
-   edge gradient. */
-.scrim--mid {
-  background: radial-gradient(ellipse at 50% 46%, rgba(42,39,36,0.5) 0%, rgba(42,39,36,0) 62%);
-  opacity: 0;
-}
-
-/* ------------------------------------------------------------ film type --- */
 
 .masthead {
   position: absolute;
@@ -112,21 +67,26 @@ a { color: inherit; text-decoration: none; }
 }
 
 .masthead__mark {
-  font-family: var(--sans);
   font-weight: 500;
   font-size: clamp(0.9rem, 1.4vw, 1.05rem);
   letter-spacing: 0.14em;
   color: var(--paper-raised);
 }
 
-.masthead__nav { display: flex; gap: clamp(1rem, 2.5vw, 2rem); }
-.masthead__nav a { color: rgba(251,250,247,0.82); transition: color 200ms var(--ease); }
-.masthead__nav a:hover { color: var(--paper-raised); }
+.masthead__nav {
+  display: flex;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(251,250,247,0.82);
+}
 
-/* Centred in the upper third, in the sky the wide shot leaves open. */
-/* Widths are in rem, not ch. A ch unit resolves against THIS element's font
-   size -- 16px here -- while the headline inside runs 44-122px, so ch-based
-   widths come out far too narrow and wrap the display type mid-phrase. */
+/* Centred in the upper third, in the sky the wide shot leaves open.
+   Width is in rem, not ch -- a ch resolves against THIS element's 16px font
+   while the headline inside runs 44-104px, so ch comes out far too narrow
+   and wraps the display type mid-phrase. */
 .statement {
   position: absolute;
   top: 19vh;
@@ -136,45 +96,35 @@ a { color: inherit; text-decoration: none; }
   text-align: center;
 }
 
-/* The macro beat, centred on the flower's own centre. */
-.midbeat {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(92vw, 34rem);
-  text-align: center;
-  opacity: 0;
-}
-
-.statement__line,
-.midbeat__line,
-.frost__line {
+.statement__line {
   margin: 0;
   font-family: var(--serif);
   font-weight: 400;
-  /* Deliberately slightly too large, tight leading, negative tracking.
-     STYLE.md §2. */
+  font-size: clamp(2.75rem, 7.5vw, 6.5rem);
+  /* Deliberately slightly too large, tight leading, negative tracking. */
   line-height: 0.95;
   letter-spacing: -0.02em;
   color: var(--paper-raised);
 }
 
-.statement__line { font-size: clamp(2.75rem, 7.5vw, 6.5rem); }
-.midbeat__line   { font-size: clamp(2rem, 4.6vw, 3.9rem); margin-top: 0.85rem; }
-.frost__line     { font-size: clamp(1.75rem, 3.2vw, 2.75rem); margin-top: 0.85rem; }
+.statement__line em { font-style: italic; color: var(--blush); }
 
-.statement__line em,
-.midbeat__line em,
-.frost__line em { font-style: italic; color: var(--blush); }
-
-.statement__sub,
-.frost__sub {
+.statement__sub {
   margin: clamp(1rem, 2vw, 1.5rem) auto 0;
   max-width: 38ch;
   font-size: clamp(0.875rem, 1.1vw, 1rem);
   line-height: 1.5;
   color: rgba(251,250,247,0.84);
+}
+
+.credit {
+  position: absolute;
+  left: var(--edge);
+  bottom: clamp(1rem, 2.5vh, 1.75rem);
+  margin: 0;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: rgba(251,250,247,0.42);
 }
 
 /* ------------------------------------------------------- wind reveal --- */
@@ -187,8 +137,8 @@ a { color: inherit; text-decoration: none; }
    offset on every letter reads as a mechanical slide; the variation is what
    makes it look like air moved each one separately.
 
-   Both hiding rules are scoped to attributes that only JS ever sets, so if
-   the script fails the text is simply there. */
+   Both hiding rules are scoped to attributes only JS ever sets, so if the
+   script fails the text is simply there. */
 
 .word {
   display: inline-block;
@@ -202,7 +152,7 @@ a { color: inherit; text-decoration: none; }
 
 [data-revealing="true"] .glyph {
   /* 'both' covers the stagger delay too, so a glyph waiting its turn stays
-     in the airborne state rather than popping in and then animating. */
+     airborne rather than popping in and then animating. */
   animation: glyph-settle 1250ms var(--ease) both;
   animation-delay: calc(var(--i, 0) * 26ms);
 }
@@ -235,165 +185,10 @@ a { color: inherit; text-decoration: none; }
   to   { opacity: 1; filter: blur(0);   transform: none; }
 }
 
-/* ---------------------------------------------------------------- frost --- */
-
-/* Frosted panel at the end of the runway. The blur keeps the footage
-   readable behind the text instead of dimming it away.
-   backdrop-filter is compositing-expensive over a playing video, so it is
-   only switched on by .is-live while the panel is actually visible. */
-.frost {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(3rem, 10vh, 7rem);
-  transform: translateX(-50%);
-  width: min(92vw, 34rem);
-  padding: clamp(1.75rem, 4vw, 3rem);
-  text-align: center;
-  border-radius: 2px;
-  border: 1px solid rgba(251,250,247,0.18);
-  background: rgba(42,39,36,0.28);
-  opacity: 0;
-}
-
-.frost.is-live {
-  backdrop-filter: blur(18px) saturate(115%);
-  -webkit-backdrop-filter: blur(18px) saturate(115%);
-}
-
-.frost__sub { margin-bottom: clamp(1.25rem, 2.5vw, 1.75rem); }
-
-.frost__cta {
-  display: inline-block;
-  padding: 0.85em 1.9em;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink);
-  background: var(--paper-raised);
-  border-radius: 1px;
-  transition: background 200ms var(--ease), color 200ms var(--ease);
-}
-
-.frost__cta:hover { background: var(--blush); color: var(--ink); }
-
-.cue {
-  position: absolute;
-  right: var(--edge);
-  bottom: clamp(2.5rem, 7vw, 4.5rem);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.cue span { color: rgba(251,250,247,0.75); }
-
-.cue__rule {
-  display: block;
-  width: 56px;
-  height: 1px;
-  background: rgba(251,250,247,0.45);
-  transform-origin: right center;
-  animation: cue-draw 2.8s var(--ease) infinite;
-}
-
-@keyframes cue-draw {
-  0%, 100% { transform: scaleX(0.35); opacity: 0.45; }
-  50%      { transform: scaleX(1);    opacity: 0.9; }
-}
-
-/* ----------------------------------------------------------------- shop --- */
-
-.shop {
-  position: relative;
-  z-index: 1;
-  background: var(--paper);
-  padding: clamp(6rem, 14vh, 12rem) var(--gutter) clamp(4rem, 8vh, 7rem);
-}
-
-.shop__intro { max-width: 1240px; margin: 0 auto clamp(3rem, 6vh, 5rem); }
-
-.eyebrow { margin: 0 0 1rem; }
-
-.shop__title {
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-  gap: clamp(1.25rem, 2.5vw, 2.25rem);
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0;
-  list-style: none;
-}
-
-/* Entrance motion, so it eases -- unlike anything scroll-driven. */
-.card {
-  opacity: 0;
-  transform: translateY(18px);
-  transition:
-    opacity 700ms var(--ease) calc(var(--i, 0) * 90ms),
-    transform 700ms var(--ease) calc(var(--i, 0) * 90ms);
-}
-
-.shop.is-revealed .card { opacity: 1; transform: none; }
-
-.card__frame {
-  aspect-ratio: 4 / 5;
-  background: var(--paper-raised);
-  border: 1px solid rgba(138,144,128,0.28);
-  border-radius: 2px;
-}
-
-.card__meta { padding-top: 1rem; }
-
-.card__meta h3 {
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
-}
-
-.card__meta p {
-  margin: 0.25rem 0 0.6rem;
-  font-size: 0.8125rem;
-  color: var(--ink-soft);
-}
-
-.card__meta span { font-size: 0.875rem; font-weight: 500; }
-.card__meta span i { font-style: normal; color: var(--ink-soft); }
-
-.footer {
-  padding: 0 var(--gutter) clamp(3rem, 6vh, 5rem);
-  color: var(--ink-soft);
-  font-size: 0.75rem;
-  line-height: 1.6;
-}
-
-.footer p {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(138,144,128,0.28);
-}
-
-.footer strong { color: var(--ink); font-weight: 500; }
-
-/* ------------------------------------------------------ reduced motion --- */
-
 @media (prefers-reduced-motion: reduce) {
-  .film { height: 100vh; }
-  .film__stage { position: relative; }
-  .cue__rule { animation: none; transform: scaleX(1); }
-  .card { opacity: 1; transform: none; transition: none; }
-  /* No assembling text: the split never runs, so glyphs are plain text. */
-  .glyph, [data-reveal-after] { opacity: 1; filter: none; transform: none; animation: none; }
+  /* The split never runs, so glyphs are plain text; make sure nothing that
+     depends on the animation is left hidden. */
+  .glyph, [data-reveal-after] {
+    opacity: 1; filter: none; transform: none; animation: none;
+  }
 }

@@ -1,26 +1,9 @@
 /**
- * FLOWERBX concept — one film, scrubbed by scroll.
+ * FLOWERBX concept.
  *
- * Scroll position through the runway becomes a single 0..1 value. That value
- * seeks one concatenated film and drives every text moment.
- *
- * The film NEVER plays. It is paused for its entire life and moved only by
- * currentTime. An earlier build looped the static head of the clip at rest to
- * fake ambient wind, which fought the scrub -- playback and seeking were both
- * touching currentTime, so the two took turns winning.
- *
- * Performance rules this file follows, learned the hard way:
- *
- *   1. NEVER read computed style in the loop. An earlier version called
- *      getComputedStyle() every frame, forcing a style recalculation 60x a
- *      second for a value that never changed.
- *   2. Never write currentTime more precisely than the film can show. At
- *      20fps, seeks closer than half a frame are invisible but still cost a
- *      full decode.
- *   3. backdrop-filter is only switched on while it is actually visible.
- *      Blurring the backdrop of a scrubbing video re-runs the blur on every
- *      decoded frame, which is exactly the kind of per-frame cost this file
- *      exists to avoid.
+ * The film loops on its own clock -- it is no longer scrubbed. Scroll drives
+ * only the text moments, and the hero headline assembles itself out of the
+ * wind on load.
  */
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
@@ -33,35 +16,19 @@ function span(v, lo, hi) {
   return clamp((v - lo) / (hi - lo), 0, 1);
 }
 
-/**
- * Where things happen on the film's 0..1 timeline.
- *
- * The film is two clips concatenated, so ~0.5 is the deepest point inside the
- * flower -- the end of the push and the start of the pull-back. The three text
- * moments are placed against that: one before, one on it, one at the far end.
- */
+/** Where the text moments sit on the scroll runway. With the film on its own
+ *  clock these are no longer pinned to particular frames -- they are purely
+ *  positions in the scroll. */
 const TIMELINE = {
-  statementOut: [0, 0.14],
-  scrollCueOut: [0, 0.07],
-  midIn:  [0.36, 0.45],
-  midOut: [0.55, 0.63],
-  frostIn: [0.82, 0.94],
+  statementOut: [0, 0.18],
+  scrollCueOut: [0, 0.10],
+  midIn:  [0.30, 0.42],
+  midOut: [0.52, 0.62],
+  frostIn: [0.74, 0.90],
 };
-
-/** Frames per second of the encoded film. Used to avoid sub-frame seeks.
- *  30, not 24 or 20: scrubbing exposes every frame boundary when you scroll
- *  slowly, so more frames is smoother -- the opposite of the tradeoff that
- *  applies to normal playback. */
-const FPS = 30;
-
-/** Give up on a seek that never reports back, so a dropped 'seeked' event
- *  cannot wedge the queue permanently. */
-const SEEK_TIMEOUT_MS = 400;
 
 const root = document.querySelector('[data-film]');
 const video = document.querySelector('[data-video]');
-const stillWide = document.querySelector('[data-still="wide"]');
-const stillBench = document.querySelector('[data-still="bench"]');
 
 const cues = {
   statement: document.querySelector('[data-cue="statement"]'),
@@ -76,17 +43,99 @@ const scrims = {
 
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+/* ------------------------------------------------------------- reveal --- */
+
+/**
+ * Split text into per-glyph spans so the headline can reassemble out of the
+ * wind: each letter starts downwind -- pushed right, lifted, tilted, blurred
+ * to nothing -- and settles back into place, left to right. Running the blow
+ * backwards, in other words.
+ *
+ * Words are wrapped too, and kept nowrap, so line breaking still happens at
+ * spaces rather than between letters.
+ *
+ * Per-glyph offsets are randomised. An identical offset on every letter reads
+ * as a mechanical slide; varying them is what makes it look like air moved
+ * each one separately.
+ */
+function splitGlyphs(el) {
+  // textContent alone would run the two lines together ("Everythingin
+  // season"), because a <br> contributes no character. Treat it as a space.
+  const label = document.createElement('div');
+  label.innerHTML = el.innerHTML.replace(/<br\s*\/?>/gi, ' ');
+  el.setAttribute('aria-label', label.textContent.replace(/\s+/g, ' ').trim());
+  let i = 0;
+
+  const walk = (node) => {
+    [...node.childNodes].forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const frag = document.createDocumentFragment();
+        // Keep whitespace as real text nodes so words can still break.
+        child.textContent.split(/(\s+)/).forEach((token) => {
+          if (!token) return;
+          if (/^\s+$/.test(token)) {
+            frag.appendChild(document.createTextNode(token));
+            return;
+          }
+          const word = document.createElement('span');
+          word.className = 'word';
+          word.setAttribute('aria-hidden', 'true');
+          for (const ch of token) {
+            const g = document.createElement('span');
+            g.className = 'glyph';
+            g.textContent = ch;
+            g.style.setProperty('--i', String(i++));
+            // Downwind and slightly lifted, like the letter is still airborne.
+            g.style.setProperty('--dx', (0.45 + Math.random() * 0.7).toFixed(2) + 'em');
+            g.style.setProperty('--dy', ((Math.random() - 0.72) * 0.7).toFixed(2) + 'em');
+            g.style.setProperty('--rot', ((Math.random() - 0.45) * 16).toFixed(1) + 'deg');
+            word.appendChild(g);
+          }
+          frag.appendChild(word);
+        });
+        node.replaceChild(frag, child);
+      } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName !== 'BR') {
+        walk(child);
+      }
+    });
+  };
+
+  walk(el);
+  return i;
+}
+
+async function startReveal() {
+  const targets = document.querySelectorAll('[data-reveal]');
+  let total = 0;
+  targets.forEach((el) => { total = Math.max(total, splitGlyphs(el)); });
+
+  // Holds the split glyphs invisible until the run starts. Scoped to an
+  // attribute only this function sets, so a script failure leaves plain
+  // visible text rather than an empty hero.
+  root.dataset.split = 'true';
+
+  // The supporting line follows the last glyph rather than racing it.
+  const after = document.querySelector('[data-reveal-after]');
+  if (after) after.style.setProperty('--delay', `${420 + total * 26}ms`);
+
+  // Wait for the real face: glyph boxes measured against the fallback serif
+  // shift when Instrument Serif arrives, and a reflow mid-animation is very
+  // visible when every letter is separately positioned. Capped, because a
+  // font that never resolves must not mean a hero that never appears.
+  await Promise.race([
+    document.fonts ? document.fonts.ready.catch(() => {}) : Promise.resolve(),
+    new Promise((r) => setTimeout(r, 1200)),
+  ]);
+
+  root.dataset.revealing = 'true';
+}
+
+/* --------------------------------------------------------------- scroll --- */
+
 let target = 0;
 let current = 0;
 let ticking = false;
-let lastSeek = -1;
-let scrubbable = false;
 let frostLive = false;
-
-// Seek queue state. Exactly one seek is ever in flight; see requestSeek().
-let desiredTime = 0;
-let seekPending = false;
-let seekWatchdog = 0;
 
 function readProgress() {
   const rect = root.getBoundingClientRect();
@@ -97,7 +146,7 @@ function readProgress() {
 
 function draw(p) {
   const statement = 1 - span(p, ...TIMELINE.statementOut);
-  // In, then back out: the beat belongs to the macro frame only.
+  // In, then back out: the beat is a passing thought, not a caption.
   const mid = Math.min(span(p, ...TIMELINE.midIn), 1 - span(p, ...TIMELINE.midOut));
   const frost = span(p, ...TIMELINE.frostIn);
 
@@ -111,65 +160,13 @@ function draw(p) {
   scrims.hero.style.opacity = String(statement);
   scrims.mid.style.opacity = String(mid);
 
-  // Only composite the backdrop blur while the panel is actually on screen.
+  // Only composite the backdrop blur while the panel is on screen. Blurring
+  // the backdrop of a playing video re-runs the blur on every decoded frame.
   const wantFrost = frost > 0.001;
   if (wantFrost !== frostLive) {
     frostLive = wantFrost;
     cues.frost.classList.toggle('is-live', wantFrost);
   }
-
-  if (scrubbable) scrub(p);
-  else drawStills(p);
-}
-
-/** Fallback only. Both plates stay at scale >= 1 -- these are object-fit:
- *  cover, so anything below 1 stops covering the frame and punches a hole
- *  through to the background. */
-function drawStills(p) {
-  const swap = span(p, 0.42, 0.62);
-  stillWide.style.opacity = String(1 - swap);
-  stillWide.style.transform = `scale(${lerp(1, 1.6, p)})`;
-  stillBench.style.opacity = String(swap);
-  stillBench.style.transform = `scale(${lerp(1.6, 1, p)})`;
-}
-
-/**
- * Seeking is ASYNCHRONOUS. Assigning currentTime while a previous seek is
- * still in flight makes the browser abort and restart it, so writing on every
- * animation frame -- 60 a second, against a decoder that can finish maybe
- * 20-30 -- means most seeks are thrown away mid-flight and the picture
- * lurches between whichever few survive.
- *
- * So: only ever one seek in flight. Record where we actually want to be, and
- * when the current seek reports back, chase the latest target. Throughput
- * then equals what the decoder can genuinely deliver, and every seek that
- * starts is a seek that finishes.
- */
-function scrub(p) {
-  const d = video.duration;
-  if (!d || Number.isNaN(d)) return;
-  desiredTime = p * d;
-  requestSeek();
-}
-
-function requestSeek() {
-  if (seekPending) return;
-  // A seek finer than half a frame cannot be seen but still costs a decode.
-  if (lastSeek >= 0 && Math.abs(desiredTime - lastSeek) < 0.5 / FPS) return;
-
-  seekPending = true;
-  lastSeek = desiredTime;
-  clearTimeout(seekWatchdog);
-  seekWatchdog = setTimeout(onSeekSettled, SEEK_TIMEOUT_MS);
-  video.currentTime = desiredTime;
-}
-
-function onSeekSettled() {
-  clearTimeout(seekWatchdog);
-  if (!seekPending) return;
-  seekPending = false;
-  // The target almost certainly moved while we were seeking. Chase it.
-  requestSeek();
 }
 
 function frame() {
@@ -185,9 +182,6 @@ function frame() {
     ticking = false;
     return;
   }
-  // Smoothing factor. Higher = more attached to the finger, lower = more
-  // filmic drift. At 0.12 the tail took ~0.6s to settle across the full
-  // range, which reads as lag even when decoding is instant.
   current = lerp(current, target, 0.18);
   draw(current);
   requestAnimationFrame(frame);
@@ -220,33 +214,21 @@ function init() {
   revealShop();
 
   if (reduced.matches) {
-    // Holds on the opening frame. The stills were composed to stand alone,
-    // so the page still reads with the camera move removed entirely.
+    // No looping footage and no assembling text. The poster frame was
+    // composed to stand alone, so the hero still reads.
+    video.removeAttribute('autoplay');
+    video.pause();
     draw(0);
     return;
   }
 
-  // currentTime is unreliable until the file is fully buffered, especially on
-  // iOS Safari. Until then the stills carry the page rather than showing a
-  // hero that stutters.
-  // A seek reporting back is what lets the next one start.
-  video.addEventListener('seeked', onSeekSettled);
+  startReveal();
 
-  video.addEventListener('canplaythrough', () => {
-    // Belt and braces: nothing should ever have started it, but a paused
-    // element is the invariant this whole file depends on.
-    video.pause();
-    scrubbable = true;
-    root.dataset.ready = 'true';
-    lastSeek = -1;
-    seekPending = false;
-    draw(current);
-  }, { once: true });
-
-  // If anything ever does start playback -- a stray gesture, a browser
-  // heuristic -- put it straight back to paused rather than letting it race
-  // the scrub.
-  video.addEventListener('play', () => video.pause());
+  // Autoplay can still be refused (battery saver, some mobile data-saver
+  // modes). The poster frame is already the fallback, so there is nothing to
+  // repair -- just do not let the rejection surface as an unhandled error.
+  const attempt = video.play();
+  if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);

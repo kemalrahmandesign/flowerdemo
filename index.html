@@ -13,35 +13,24 @@
 <body>
 
 <!--
-  ONE film, ONE scrub, full bleed.
+  The film loops on its own clock. It is no longer scrubbed by scroll, so
+  the text moments are timed against the scroll runway alone rather than
+  against particular frames.
 
-  The two generated clips are concatenated into a single 10s file, encoded
-  all-intra at 20fps so a seek decodes exactly one frame. The film NEVER
-  plays on its own -- it is paused for its entire life and moved only by
-  scroll position. Three text moments sit on that timeline: the opening
-  statement, a beat at the deepest point inside the flower, and a frosted
-  panel on the final worktable frame.
+  poster = the opening still, which is also what shows for reduced motion,
+  where the loop is suppressed entirely.
 -->
 <section class="film" data-film>
   <div class="film__stage">
 
-    <div class="plate">
-      <!-- Fallback layers. Hidden the moment the film is scrubbable. -->
-      <img class="plate__still" data-still="wide" alt=""
-           src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png">
-      <img class="plate__still" data-still="bench" alt=""
-           src="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_181420_7d452e52-0693-46c8-a404-f9bab046a2d5.png">
+    <video class="plate__film" data-video
+           src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/11d6d242-5bfe-478f-b2ed-53443091e48c.mp4"
+           poster="https://d8j0ntlcm91z4.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/hf_20260803_164720_9974793f-90e0-4f7f-b4d6-b8003d42eeda.png"
+           autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
 
-      <!-- muted + playsinline are load-bearing on iOS, not decoration.
-           No autoplay, no loop: this element is never played. -->
-      <video class="plate__film" data-video
-             src="https://d2ol7oe51mr4n9.cloudfront.net/user_3FE0Xjh16Sot9aoCPbOwO7vYemS/11d6d242-5bfe-478f-b2ed-53443091e48c.mp4"
-             muted playsinline preload="auto" aria-hidden="true"></video>
-
-      <div class="scrim scrim--masthead" aria-hidden="true"></div>
-      <div class="scrim scrim--hero" data-scrim="hero" aria-hidden="true"></div>
-      <div class="scrim scrim--mid" data-scrim="mid" aria-hidden="true"></div>
-    </div>
+    <div class="scrim scrim--masthead" aria-hidden="true"></div>
+    <div class="scrim scrim--hero" data-scrim="hero" aria-hidden="true"></div>
+    <div class="scrim scrim--mid" data-scrim="mid" aria-hidden="true"></div>
 
     <header class="masthead">
       <a class="masthead__mark" href="#">FLOWERBX</a>
@@ -52,21 +41,17 @@
       </nav>
     </header>
 
-    <!-- Centred in the upper third, where the wide shot was composed to
-         leave sky. Fades out as the camera commits. -->
+    <!-- data-reveal marks text that assembles out of the wind on load. -->
     <div class="statement" data-cue="statement">
-      <h1 class="statement__line">Everything<br><em>in season</em></h1>
-      <p class="statement__sub">One flower, never mixed. Cut this morning, delivered before noon.</p>
+      <h1 class="statement__line" data-reveal>Everything<br><em>in season</em></h1>
+      <p class="statement__sub" data-reveal-after>One flower, never mixed. Cut this morning, delivered before noon.</p>
     </div>
 
-    <!-- The beat at the deepest point of the push, on the macro centre. -->
     <div class="midbeat" data-cue="mid">
       <p class="eyebrow eyebrow--light">Single variety</p>
       <p class="midbeat__line">One flower.<br><em>Nothing else.</em></p>
     </div>
 
-    <!-- Lands on the final worktable frame. Frosted so the footage stays
-         legible behind it instead of being dimmed away. -->
     <div class="frost" data-cue="frost">
       <p class="eyebrow eyebrow--light">The studio</p>
       <h2 class="frost__line">Tied by hand,<br><em>one at a time</em></h2>

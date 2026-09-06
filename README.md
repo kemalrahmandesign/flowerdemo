@@ -1,8 +1,9 @@
 # FLOWERBX — concept redesign
 
-An unofficial concept redesign. Scroll drives one continuous camera move: a
-push from a wide garden into the centre of a single ranunculus, then a pull
-back out to the hands that cut it, resolving into a product grid.
+An unofficial concept redesign. A looping film carries one continuous camera
+move — a push from a wide garden into the centre of a single ranunculus, then
+a pull back out to the hands that cut it — behind a headline that assembles
+itself out of the wind, resolving into a product grid.
 
 Not affiliated with FLOWERBX Ltd. Products, prices and imagery are fictional.
 
@@ -22,22 +23,53 @@ Live at https://kemalrahmandesign.github.io/flowerdemo/ — pushes to
 
 ## Architecture
 
-**One film, one scrub, one runway.** The two generated clips are concatenated
-into a single 10s file, so nothing switches source at runtime and there is no
-seam to hide. Scroll position through a 600vh runway becomes a single `0..1`
-value that seeks the film and drives every caption. Captions are ranges on
-that one timeline (`TIMELINE` in `src/main.js`), so they cannot drift apart.
+**The film loops on its own clock.** The two generated clips are concatenated
+into a single 10s file that autoplays, muted, on repeat. Scroll no longer
+touches it.
 
-Scroll-driven motion is linear and lerp-smoothed, never eased — easing a
+Scroll drives only the text moments, as ranges on a 300vh runway (`TIMELINE`
+in `src/main.js`). Because the film is no longer scrubbed, those moments are
+**not** pinned to particular frames any more — they appear over whatever is
+playing. The mid beat and the frosted panel were originally written against
+the macro centre and the worktable; if that pairing matters, the scrub has to
+come back.
+
+Scroll-driven opacity is linear and lerp-smoothed, never eased — easing a
 scroll-bound value makes it feel like it is arguing with your finger.
 
-The stills are a fallback only: `prefers-reduced-motion`, or a video that
-never becomes scrubbable. The page holds on them until `canplaythrough`,
-because `currentTime` is unreliable until the file is fully buffered.
+The video's `poster` is the opening still. It covers the gap before the first
+frame decodes, and stands in entirely when autoplay is refused or reduced
+motion is set.
 
-## Why the first build was laggy
+### The wind reveal
 
-Worth recording, because every one of these is a trap you hit again.
+The hero headline assembles itself out of the air on load. Each glyph starts
+downwind — pushed right, lifted, tilted, blurred to nothing — and settles into
+place, left to right: a blow-away run backwards.
+
+Text is split into per-word and per-glyph spans by `splitGlyphs()`. Words stay
+`nowrap` so lines still break at spaces rather than between letters, and the
+original string is preserved as an `aria-label` with the split spans hidden
+from assistive tech.
+
+Per-glyph offsets are **randomised**. An identical offset on every letter
+reads as a mechanical slide; the variation is the whole reason it looks like
+air moved each one separately.
+
+Two details that matter:
+
+- The run waits for `document.fonts.ready` before starting, because glyph
+  boxes measured against the fallback serif shift when Instrument Serif
+  arrives, and a reflow mid-animation is very visible when every letter is
+  separately positioned. The wait is capped at 1.2s — a font that never
+  resolves must not mean a hero that never appears.
+- Both hiding rules are scoped to attributes only JS sets (`data-split`,
+  `data-revealing`), so if the script fails the text is simply there.
+
+## Why scroll-scrubbing was laggy
+
+The scrub is gone for now, but this is kept because every one of these is a
+trap you hit again the moment it comes back.
 
 1. **The clips were never encoded for scrubbing.** Two 1080p24 files, ~31MB
    each, with a normal keyframe interval. Every `currentTime` write sent the
@@ -89,15 +121,11 @@ scrubbing there is.
 
 | What | Where | Note |
 | --- | --- | --- |
-| Pace of the whole move | `.film { height: 600vh }` | Longer runway = slower, more deliberate. |
-| Caption timing | `TIMELINE` in `main.js` | Ranges on the film's 0..1 timeline. |
-| Scrub smoothing | `lerp(current, target, 0.18)` | Higher = attached to the finger. Below ~0.12 the tail reads as lag. |
-| Seek granularity | `FPS` in `main.js` | Must match the encode. Seeks finer than half a frame are skipped. |
-
-The film never plays. It is paused for its whole life and moved only by
-`currentTime`. An earlier build looped the static head of the clip at rest to
-fake ambient wind, which fought the scrub — playback and seeking were both
-driving `currentTime` and took turns winning.
+| Length of the text journey | `.film { height: 300vh }` | Longer runway = more scroll between moments. |
+| Text moment timing | `TIMELINE` in `main.js` | Ranges on the scroll runway, 0..1. |
+| Fade smoothing | `lerp(current, target, 0.18)` | Higher = more attached to the finger. |
+| Reveal stagger | `--i * 26ms` in `styles.css` | Per-glyph delay. Higher = slower left-to-right sweep. |
+| Reveal drift | `--dx / --dy / --rot` in `splitGlyphs()` | How far downwind each glyph starts. |
 
 ## Known gaps
 
